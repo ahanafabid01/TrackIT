@@ -192,34 +192,17 @@ $owner_id = getOwnerId();
                                 <th>Customer</th>
                                 <th>Product</th>
                                 <th>Quantity</th>
+                                <th>Priority</th>
                                 <th>Status</th>
+                                <th>Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td><strong>#BK-001</strong></td>
-                                <td>
-                                    <div class="user-cell">
-                                        <div class="user-cell-avatar">JD</div>
-                                        <div class="user-cell-info">
-                                            <div class="user-cell-name">John Doe</div>
-                                            <div class="user-cell-email">john@example.com</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>Product A</td>
-                                <td><strong>5 units</strong></td>
-                                <td><span class="badge badge-orange">Pending Verification</span></td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn" title="Confirm" style="background: var(--success-color); color: white;">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                        <button class="action-btn" title="Reject" style="background: var(--error-color); color: white;">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
+                                <td colspan="8" style="text-align: center; padding: 40px;">
+                                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--primary-color);"></i>
+                                    <p style="margin-top: 10px; color: var(--text-secondary);">Loading booking requests...</p>
                                 </td>
                             </tr>
                         </tbody>
