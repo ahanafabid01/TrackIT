@@ -175,8 +175,8 @@ function renderDeliveries(deliveries) {
                 break;
             default:
                 actionButtons = `
-                    <button class="btn btn-sm btn-info" onclick="showUpdateDeliveryModal(${delivery.id})">
-                        <i class="fas fa-edit"></i> Update
+                    <button class="btn btn-sm btn-info" onclick="showUpdateDeliveryModal(${delivery.id})" title="Update Delivery Status">
+                        <i class="fas fa-edit"></i>
                     </button>
                 `;
         }
@@ -995,8 +995,30 @@ function showCreateReturnModal() {
 }
 
 function showUpdateDeliveryModal(deliveryId) {
-    document.getElementById('updateDeliveryModal').style.display = 'flex';
+    const modal = document.getElementById('updateDeliveryModal');
+    if (!modal) {
+        console.error('❌ Update delivery modal not found');
+        return;
+    }
+    
+    // Force display with proper styles (same as create delivery modal)
+    modal.style.display = 'flex';
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.style.zIndex = '9998';
+    modal.style.pointerEvents = 'auto';
+    
+    // Ensure modal content has higher z-index and can receive events
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.style.zIndex = '9999';
+        modalContent.style.pointerEvents = 'auto';
+    }
+    
+    // Set the delivery ID
     document.getElementById('updateDeliveryId').value = deliveryId;
+    
+    console.log('✅ Update delivery modal opened for delivery ID:', deliveryId);
 }
 
 function closeModal(modalId) {
@@ -1454,8 +1476,8 @@ async function updateDeliveryFromModal(event) {
     const location = document.getElementById('deliveryLocation').value?.trim();
     const description = document.getElementById('statusDescription').value?.trim();
     
-    if (!deliveryId || !newStatus || !description) {
-        showNotification('Please fill in all required fields', 'error');
+    if (!deliveryId || !newStatus) {
+        showNotification('Please select a delivery status', 'error');
         return;
     }
     

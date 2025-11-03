@@ -606,8 +606,8 @@ $owner_id = getOwnerId();
                     <input type="text" id="deliveryLocation" placeholder="Current location or last checkpoint">
                 </div>
                 <div class="form-group">
-                    <label>Status Description</label>
-                    <textarea id="statusDescription" rows="3" placeholder="Additional details about status change..." required></textarea>
+                    <label>Status Description (Optional)</label>
+                    <textarea id="statusDescription" rows="3" placeholder="Additional details about status change..."></textarea>
                 </div>
                 <div class="form-group" id="proofOfDeliveryGroup" style="display: none;">
                     <label>Proof of Delivery</label>
