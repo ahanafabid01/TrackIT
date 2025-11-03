@@ -50,7 +50,7 @@ TrackIt is a smart, role-based inventory and order management system designed to
 **Role Purpose:** Manages inventory verification, delivery, and logistics coordination.
 
 **Existing Features:**
-- ✅ Verify booking requests and confirm/reject based on stock.
+- ✅ Verify booking requests and and update status based on stock.
 - ✅ Add delivery details (courier, tracking ID, dispatch date).
 - ✅ Manage delivery status updates.
 
