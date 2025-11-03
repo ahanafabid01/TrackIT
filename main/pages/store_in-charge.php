@@ -274,7 +274,7 @@ $owner_id = getOwnerId();
         </div>
     </main>
 
-    <script src="../css/dashboard-common.js"></script>
+    <script src="../js/dashboard-common.js"></script>
     <script src="js/store_in-charge.js"></script>
 </body>
 </html>

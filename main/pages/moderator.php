@@ -431,7 +431,7 @@ $low_stock_stats = $stmt->get_result()->fetch_assoc();
     <!-- Modals will be dynamically created by JavaScript -->
     <div id="modalContainer"></div>
 
-    <script src="../css/dashboard-common.js"></script>
+    <script src="../js/dashboard-common.js"></script>
     <script>
         // Pass PHP variables to JavaScript
         const OWNER_ID = <?php echo $owner_id; ?>;
