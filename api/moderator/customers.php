@@ -267,8 +267,7 @@ function getAllCustomers($conn, $owner_id) {
     
     // Get customers
     $query = "
-        SELECT c.*, u.name as created_by_name,
-               (SELECT COUNT(*) FROM bookings WHERE customer_id = c.id) as booking_count
+        SELECT c.*, u.name as created_by_name
         FROM customers c
         LEFT JOIN users u ON c.created_by = u.id
         $whereClause

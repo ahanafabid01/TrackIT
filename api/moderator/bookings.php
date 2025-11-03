@@ -157,6 +157,15 @@ function handlePost($conn, $owner_id, $user_id) {
     if ($stmt->execute()) {
         $booking_id = $conn->insert_id;
         
+        // Update product stock - deduct the booked quantity
+        $stmt = $conn->prepare("
+            UPDATE products 
+            SET stock_quantity = stock_quantity - ? 
+            WHERE id = ? AND owner_id = ?
+        ");
+        $stmt->bind_param("iii", $quantity, $product_id, $owner_id);
+        $stmt->execute();
+        
         // Add to booking history
         $stmt = $conn->prepare("
             INSERT INTO booking_history (booking_id, new_status, changed_by, notes)
@@ -298,6 +307,18 @@ function handlePut($conn, $owner_id, $user_id) {
             $stmt->bind_param("issis", $data['id'], $previousStatus, $data['status'], $user_id, $historyNote);
             $stmt->execute();
             
+            // Restore stock if booking is cancelled or rejected
+            if (in_array($data['status'], ['Cancelled', 'Rejected']) && 
+                !in_array($previousStatus, ['Cancelled', 'Rejected'])) {
+                $stmt = $conn->prepare("
+                    UPDATE products 
+                    SET stock_quantity = stock_quantity + ? 
+                    WHERE id = ? AND owner_id = ?
+                ");
+                $stmt->bind_param("iii", $currentBooking['quantity'], $currentBooking['product_id'], $owner_id);
+                $stmt->execute();
+            }
+            
             // Update customer statistics when status changes (especially for Delivered status)
             updateCustomerStats($conn, $currentBooking['customer_id']);
         }
@@ -323,21 +344,25 @@ function handleDelete($conn, $owner_id) {
     
     // Only allow deletion of cancelled or rejected bookings
     $stmt = $conn->prepare("
-        SELECT status, customer_id FROM bookings WHERE id = ? AND owner_id = ?
+        SELECT b.*, c.id as customer_id 
+        FROM bookings b
+        LEFT JOIN customers c ON b.customer_id = c.id
+        WHERE b.id = ? AND b.owner_id = ?
     ");
     $stmt->bind_param("ii", $data['id'], $owner_id);
     $stmt->execute();
-    $result = $stmt->get_result()->fetch_assoc();
+    $booking = $stmt->get_result()->fetch_assoc();
     
-    if (!$result) {
+    if (!$booking) {
         throw new Exception('Booking not found');
     }
     
-    if (!in_array($result['status'], ['Cancelled', 'Rejected'])) {
+    if (!in_array($booking['status'], ['Cancelled', 'Rejected'])) {
         throw new Exception('Only cancelled or rejected bookings can be deleted');
     }
     
-    $customer_id = $result['customer_id'];
+    // Note: Stock was already restored when status changed to Cancelled/Rejected
+    // No need to restore again unless the status was never properly changed
     
     // Delete booking (will cascade delete reminders and history)
     $stmt = $conn->prepare("DELETE FROM bookings WHERE id = ? AND owner_id = ?");
@@ -345,7 +370,7 @@ function handleDelete($conn, $owner_id) {
     
     if ($stmt->execute()) {
         // Update customer statistics after deletion
-        updateCustomerStats($conn, $customer_id);
+        updateCustomerStats($conn, $booking['customer_id']);
         
         echo json_encode([
             'success' => true,
