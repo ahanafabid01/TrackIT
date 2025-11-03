@@ -392,6 +392,20 @@ $owner_id = getOwnerId();
                 <h3><i class="fas fa-truck"></i> Create New Delivery</h3>
                 <span class="close" onclick="closeModal('createDeliveryModal')">&times;</span>
             </div>
+            
+            <!-- Important Notice -->
+            <div class="delivery-notice-container">
+                <div class="delivery-notice">
+                    <div class="notice-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="notice-content">
+                        <h4>Important Notice</h4>
+                        <p>Only bookings with status <strong>"Ready"</strong> or <strong>"Processing"</strong> should be dispatched for delivery. Please ensure products are verified, packaged, and prepared before creating a delivery order.</p>
+                    </div>
+                </div>
+            </div>
+            
             <form id="createDeliveryForm">
                 <!-- Booking Selection -->
                 <div class="form-section">

@@ -67,14 +67,14 @@ function handlePost($conn, $owner_id, $user_id) {
         SELECT b.*, c.name as customer_name, c.phone as customer_phone, c.address as customer_address
         FROM bookings b
         LEFT JOIN customers c ON b.customer_id = c.id
-        WHERE b.id = ? AND b.owner_id = ? AND b.status IN ('Confirmed', 'Processing')
+        WHERE b.id = ? AND b.owner_id = ? AND b.status IN ('Processing', 'Ready')
     ");
     $stmt->bind_param("ii", $data['booking_id'], $owner_id);
     $stmt->execute();
     $booking = $stmt->get_result()->fetch_assoc();
     
     if (!$booking) {
-        throw new Exception('Booking not found or not in deliverable status');
+        throw new Exception('Booking not found or not ready for delivery. Only Processing or Ready bookings can be dispatched.');
     }
     
     // Check if delivery already exists
@@ -125,28 +125,56 @@ function handlePost($conn, $owner_id, $user_id) {
     if ($stmt->execute()) {
         $delivery_id = $conn->insert_id;
         
-        // Update booking status to Processing
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'Processing' WHERE id = ?");
+        // Update booking status to Delivered
+        $stmt = $conn->prepare("UPDATE bookings SET status = 'Delivered', delivery_date = NOW() WHERE id = ?");
         $stmt->bind_param("i", $data['booking_id']);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            error_log("Failed to update booking status: " . $stmt->error);
+        }
         
-        // Add tracking history
+        // Add to booking history
         $stmt = $conn->prepare("
-            INSERT INTO delivery_tracking_history (delivery_id, status, description, updated_by)
-            VALUES (?, 'Dispatched', 'Package dispatched from warehouse', ?)
+            INSERT INTO booking_history (booking_id, previous_status, new_status, changed_by, notes)
+            VALUES (?, ?, 'Delivered', ?, 'Delivery created and dispatched')
         ");
-        $dispatched = 'Dispatched';
-        $stmt->bind_param("isi", $delivery_id, $dispatched, $user_id);
-        $stmt->execute();
+        $previous_status = $booking['status'];
+        $stmt->bind_param("isi", $data['booking_id'], $previous_status, $user_id);
+        if (!$stmt->execute()) {
+            error_log("Failed to insert booking history: " . $stmt->error);
+        }
+        
+        // Try to add tracking history (if table exists)
+        try {
+            $stmt = $conn->prepare("
+                INSERT INTO delivery_tracking_history (delivery_id, status, description, updated_by)
+                VALUES (?, ?, ?, ?)
+            ");
+            if ($stmt) {
+                $status_dispatched = 'Dispatched';
+                $description = 'Package dispatched from warehouse';
+                $stmt->bind_param("issi", $delivery_id, $status_dispatched, $description, $user_id);
+                $stmt->execute();
+            }
+        } catch (Exception $e) {
+            error_log("Tracking history table might not exist: " . $e->getMessage());
+        }
+        
+        // Update customer statistics (safely)
+        try {
+            updateCustomerStatsFromBooking($conn, $data['booking_id']);
+        } catch (Exception $e) {
+            error_log("Failed to update customer stats: " . $e->getMessage());
+        }
         
         echo json_encode([
             'success' => true,
-            'message' => 'Delivery created successfully',
+            'message' => 'Delivery created successfully. Booking status updated to Delivered.',
             'delivery_id' => $delivery_id,
-            'tracking_number' => $tracking_number
+            'tracking_number' => $tracking_number,
+            'booking_status' => 'Delivered'
         ]);
     } else {
-        throw new Exception('Failed to create delivery');
+        throw new Exception('Failed to create delivery: ' . $stmt->error);
     }
 }
 

@@ -1010,9 +1010,9 @@ function closeModal(modalId) {
 // Load Confirmed Bookings for Delivery Creation
 async function loadConfirmedBookings() {
     try {
-        const data = await fetchAPI('../../api/store_incharge/booking_requests.php?status=Confirmed,Processing,Ready');
+        const data = await fetchAPI('../../api/store_incharge/booking_requests.php?status=Processing,Ready');
         const select = document.getElementById('deliveryBookingSelect');
-        select.innerHTML = '<option value="">Select a confirmed booking...</option>';
+        select.innerHTML = '<option value="">Select a ready booking for delivery...</option>';
         
         if (data.bookings && data.bookings.length > 0) {
             data.bookings.forEach(booking => {
@@ -1445,6 +1445,49 @@ async function updateDeliveryStatus(deliveryId, newStatus) {
     }
 }
 
+// Update Delivery Status from Modal Form
+async function updateDeliveryFromModal(event) {
+    event.preventDefault();
+    
+    const deliveryId = document.getElementById('updateDeliveryId').value;
+    const newStatus = document.getElementById('newDeliveryStatus').value;
+    const location = document.getElementById('deliveryLocation').value?.trim();
+    const description = document.getElementById('statusDescription').value?.trim();
+    
+    if (!deliveryId || !newStatus || !description) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    // Show loading state
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    submitButton.disabled = true;
+    
+    try {
+        const response = await fetchAPI('../../api/store_incharge/deliveries.php', {
+            method: 'PUT',
+            body: JSON.stringify({
+                delivery_id: deliveryId,
+                delivery_status: newStatus,
+                status_description: description,
+                location: location || null
+            })
+        });
+        
+        showNotification(response.message || 'Delivery status updated successfully', 'success');
+        closeModal('updateDeliveryModal');
+        loadDeliveries();
+        loadDashboardStats();
+    } catch (error) {
+        showNotification('Error updating delivery status: ' + error.message, 'error');
+    } finally {
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+}
+
 // Update Return Status
 async function updateReturnStatus(returnId, newStatus) {
     const confirmMsg = `Are you sure you want to ${newStatus.toLowerCase()} this return?`;
@@ -1602,6 +1645,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (createReturnForm) {
         createReturnForm.addEventListener('submit', createReturn);
         console.log('✅ Create return form listener added');
+    }
+    
+    // Add event listener for update delivery form
+    const updateDeliveryForm = document.getElementById('updateDeliveryForm');
+    if (updateDeliveryForm) {
+        updateDeliveryForm.addEventListener('submit', updateDeliveryFromModal);
+        console.log('✅ Update delivery form listener added');
     }
     
     // Show proof of delivery field when status is 'Delivered'
