@@ -4,10 +4,16 @@
  * Handles all booking-related operations
  */
 
+// Start output buffering to prevent any whitespace issues
+ob_start();
+
 require_once '../../config/config.php';
 
 // Check if user is logged in and has proper role
 requireRole(['Moderator', 'Owner', 'Store In-charge']);
+
+// Clean any output that may have leaked
+ob_clean();
 
 header('Content-Type: application/json');
 
@@ -33,11 +39,16 @@ try {
             throw new Exception('Method not allowed');
     }
 } catch (Exception $e) {
+    ob_clean(); // Clear any output before sending error
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
     ]);
 }
+
+// Flush output buffer
+ob_end_flush();
+
 
 /**
  * GET - Fetch bookings
@@ -114,25 +125,32 @@ function handlePost($conn, $owner_id, $user_id) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     
+    // Prepare variables for bind_param (cannot use ?? operator directly)
     $status = $data['status'] ?? 'Pending';
     $priority = $data['priority'] ?? 'Normal';
     $booking_date = $data['booking_date'] ?? date('Y-m-d');
+    $delivery_date = $data['delivery_date'] ?? null;
+    $notes = $data['notes'] ?? null;
+    $internal_notes = $data['internal_notes'] ?? null;
+    $customer_id = $data['customer_id'];
+    $product_id = $data['product_id'];
+    $quantity = $data['quantity'];
     
     $stmt->bind_param(
         "siiiddsssssssi",
         $booking_number,
         $owner_id,
-        $data['customer_id'],
-        $data['product_id'],
-        $data['quantity'],
+        $customer_id,
+        $product_id,
+        $quantity,
         $unit_price,
         $total_amount,
         $status,
         $priority,
         $booking_date,
-        $data['delivery_date'] ?? null,
-        $data['notes'] ?? null,
-        $data['internal_notes'] ?? null,
+        $delivery_date,
+        $notes,
+        $internal_notes,
         $user_id
     );
     
@@ -147,6 +165,9 @@ function handlePost($conn, $owner_id, $user_id) {
         $historyNote = "Booking created";
         $stmt->bind_param("isis", $booking_id, $status, $user_id, $historyNote);
         $stmt->execute();
+        
+        // Update customer statistics
+        updateCustomerStats($conn, $customer_id);
         
         // Create automatic reminder if pending
         if ($status === 'Pending') {
@@ -276,6 +297,9 @@ function handlePut($conn, $owner_id, $user_id) {
             $historyNote = $data['history_note'] ?? "Status changed from $previousStatus to {$data['status']}";
             $stmt->bind_param("issis", $data['id'], $previousStatus, $data['status'], $user_id, $historyNote);
             $stmt->execute();
+            
+            // Update customer statistics when status changes (especially for Delivered status)
+            updateCustomerStats($conn, $currentBooking['customer_id']);
         }
         
         echo json_encode([
@@ -299,7 +323,7 @@ function handleDelete($conn, $owner_id) {
     
     // Only allow deletion of cancelled or rejected bookings
     $stmt = $conn->prepare("
-        SELECT status FROM bookings WHERE id = ? AND owner_id = ?
+        SELECT status, customer_id FROM bookings WHERE id = ? AND owner_id = ?
     ");
     $stmt->bind_param("ii", $data['id'], $owner_id);
     $stmt->execute();
@@ -313,11 +337,16 @@ function handleDelete($conn, $owner_id) {
         throw new Exception('Only cancelled or rejected bookings can be deleted');
     }
     
+    $customer_id = $result['customer_id'];
+    
     // Delete booking (will cascade delete reminders and history)
     $stmt = $conn->prepare("DELETE FROM bookings WHERE id = ? AND owner_id = ?");
     $stmt->bind_param("ii", $data['id'], $owner_id);
     
     if ($stmt->execute()) {
+        // Update customer statistics after deletion
+        updateCustomerStats($conn, $customer_id);
+        
         echo json_encode([
             'success' => true,
             'message' => 'Booking deleted successfully'
@@ -487,4 +516,32 @@ function getBookingStats($conn, $owner_id) {
         'success' => true,
         'stats' => $stats
     ]);
+}
+
+/**
+ * Update customer statistics (total_orders and total_spent)
+ * Call this whenever a booking is created, updated, or deleted
+ */
+function updateCustomerStats($conn, $customer_id) {
+    // Count total bookings (all statuses)
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as total_orders,
+               SUM(CASE WHEN status = 'Delivered' THEN total_amount ELSE 0 END) as total_spent
+        FROM bookings 
+        WHERE customer_id = ?
+    ");
+    $stmt->bind_param("i", $customer_id);
+    $stmt->execute();
+    $stats = $stmt->get_result()->fetch_assoc();
+    
+    // Update customer record
+    $stmt = $conn->prepare("
+        UPDATE customers 
+        SET total_orders = ?, total_spent = ?
+        WHERE id = ?
+    ");
+    $total_orders = $stats['total_orders'];
+    $total_spent = $stats['total_spent'] ?? 0;
+    $stmt->bind_param("idi", $total_orders, $total_spent, $customer_id);
+    $stmt->execute();
 }

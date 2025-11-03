@@ -341,7 +341,8 @@ $low_stock_stats = $stmt->get_result()->fetch_assoc();
                                 <th>Phone</th>
                                 <th>Email</th>
                                 <th>Total Orders</th>
-                                <th>Status</th>
+                                <th>Total Spent</th>
+                                <th></th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -378,7 +379,7 @@ $low_stock_stats = $stmt->get_result()->fetch_assoc();
                         </select>
                     </div>
                     <div class="filter-group">
-                        <input type="text" id="productSearch" placeholder="Search products..." onkeyup="searchProducts()">
+                        <input type="text" id="productSearchFilter" placeholder="Search products..." onkeyup="searchProducts()">
                     </div>
                 </div>
 

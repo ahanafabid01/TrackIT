@@ -168,12 +168,31 @@ function openBookingModal(bookingId = null) {
     const modal = createBookingModal(bookingId);
     showModal(modal);
     
+    console.log('Booking modal opened');
+    
+    // Load products and customers data
+    loadCustomersForSelect();
+    loadProductsForSelect().then(() => {
+        console.log('Products loaded for modal:', window.allProductsData?.length || 0);
+    });
+    
     if (bookingId) {
         loadBookingData(bookingId);
-    } else {
-        loadCustomersForSelect();
-        loadProductsForSelect();
     }
+    
+    // Add event listener for product search after modal is rendered
+    setTimeout(() => {
+        const productSearchInput = document.getElementById('productSearch');
+        if (productSearchInput) {
+            console.log('Product search input found and ready');
+            // Test the input
+            productSearchInput.addEventListener('focus', () => {
+                console.log('Product search input focused');
+            });
+        } else {
+            console.error('Product search input NOT found in modal');
+        }
+    }, 100);
 }
 
 function createBookingModal(bookingId = null) {
@@ -181,7 +200,7 @@ function createBookingModal(bookingId = null) {
     
     return `
         <div class="modal active" id="bookingModal">
-            <div class="modal-content">
+            <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${isEdit ? 'Edit Booking' : 'New Booking'}</h2>
                     <button class="modal-close" onclick="closeModal('bookingModal')">&times;</button>
@@ -189,22 +208,104 @@ function createBookingModal(bookingId = null) {
                 <div class="modal-body">
                     <form id="bookingForm">
                         <input type="hidden" id="bookingId" value="${bookingId || ''}">
+                        <input type="hidden" id="selectedCustomerId" value="">
                         
-                        <div class="form-group">
-                            <label class="form-label">Customer *</label>
-                            <select class="form-control" id="customerId" required>
-                                <option value="">Select Customer</option>
-                            </select>
+                        <!-- Customer Search Section -->
+                        <div class="form-section">
+                            <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1e293b; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-user"></i> Customer Information
+                            </h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Search Customer by Phone *</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="tel" class="form-control" id="customerPhone" placeholder="Enter phone number" onkeyup="searchCustomerByPhone()" required>
+                                    <button type="button" class="btn btn-secondary" onclick="toggleNewCustomerForm()" id="toggleCustomerBtn">
+                                        <i class="fas fa-plus"></i> New
+                                    </button>
+                                </div>
+                                <small id="customerSearchStatus" style="display: block; margin-top: 5px; color: #64748b;"></small>
+                            </div>
+                            
+                            <!-- Existing Customer Display -->
+                            <div id="existingCustomerInfo" style="display: none; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div style="font-weight: 600; color: #0c4a6e; margin-bottom: 5px;" id="existingCustomerName"></div>
+                                        <div style="font-size: 13px; color: #075985;" id="existingCustomerDetails"></div>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="clearCustomerSelection()">
+                                        <i class="fas fa-times"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- New Customer Form -->
+                            <div id="newCustomerForm" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 15px;">
+                                    <h4 style="margin: 0; font-size: 14px; color: #1e293b;">New Customer Details</h4>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label">Full Name *</label>
+                                        <input type="text" class="form-control" id="newCustomerName">
+                                    </div>
+                                    
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="newCustomerEmail">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
+                                    <label class="form-label">Address</label>
+                                    <input type="text" class="form-control" id="newCustomerAddress">
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label">City</label>
+                                        <input type="text" class="form-control" id="newCustomerCity">
+                                    </div>
+                                    
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label">State</label>
+                                        <input type="text" class="form-control" id="newCustomerState">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
+                        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+                        
+                        <!-- Product Selection Section -->
+                        <div class="form-section">
+                            <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1e293b; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-box"></i> Product Details
+                            </h3>
+                        
                         <div class="form-group">
-                            <label class="form-label">Product *</label>
-                            <select class="form-control" id="productId" required onchange="updateProductDetails()">
-                                <option value="">Select Product</option>
-                            </select>
+                            <label class="form-label">Search Product *</label>
+                            <div class="product-search-wrapper">
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="productSearch" 
+                                       placeholder="Type product name or SKU..." 
+                                       onkeyup="searchProductsLive()" 
+                                       oninput="searchProductsLive()"
+                                       autocomplete="off"
+                                       style="padding-right: 40px;">
+                                <i class="fas fa-search" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none;"></i>
+                                <div id="productSearchResults"></div>
+                            </div>
+                            <input type="hidden" id="productId" required>
+                            <small style="color: #64748b; font-size: 12px; display: block; margin-top: 4px;">
+                                <i class="fas fa-info-circle"></i> Start typing to search products
+                            </small>
                         </div>
                         
-                        <div id="productDetails" style="display: none; padding: 10px; background: #f1f5f9; border-radius: 6px; margin-bottom: 15px;">
+                        <div id="productDetails" style="display: none; padding: 12px; background: #dbeafe; border: 1px solid #93c5fd; border-radius: 6px; margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                                 <span style="color: #64748b;">Available Stock:</span>
                                 <strong id="availableStock">0</strong>
@@ -231,18 +332,6 @@ function createBookingModal(bookingId = null) {
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label">Status</label>
-                            <select class="form-control" id="status">
-                                <option value="Pending">Pending</option>
-                                <option value="Confirmed">Confirmed</option>
-                                <option value="Processing">Processing</option>
-                                <option value="Ready">Ready</option>
-                                <option value="Delivered">Delivered</option>
-                                <option value="Cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
                             <label class="form-label">Priority</label>
                             <select class="form-control" id="priority">
                                 <option value="Normal">Normal</option>
@@ -254,11 +343,6 @@ function createBookingModal(bookingId = null) {
                         <div class="form-group">
                             <label class="form-label">Booking Date</label>
                             <input type="date" class="form-control" id="bookingDate" value="${new Date().toISOString().split('T')[0]}">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Expected Delivery Date</label>
-                            <input type="date" class="form-control" id="deliveryDate">
                         </div>
                         
                         <div class="form-group">
@@ -282,58 +366,323 @@ async function loadCustomersForSelect() {
         const data = await response.json();
         
         if (data.success) {
-            const select = document.getElementById('customerId');
-            data.customers.forEach(customer => {
-                const option = document.createElement('option');
-                option.value = customer.id;
-                option.textContent = `${customer.name} - ${customer.phone}`;
-                select.appendChild(option);
-            });
+            // Store customers globally for search
+            window.allCustomersData = data.customers;
         }
     } catch (error) {
         console.error('Error loading customers:', error);
     }
 }
 
+// Search customer by phone number
+let customerSearchTimeout;
+async function searchCustomerByPhone() {
+    const phoneInput = document.getElementById('customerPhone');
+    const phone = phoneInput.value.trim();
+    const statusEl = document.getElementById('customerSearchStatus');
+    const existingInfoEl = document.getElementById('existingCustomerInfo');
+    const newFormEl = document.getElementById('newCustomerForm');
+    
+    // Clear any existing timeout
+    clearTimeout(customerSearchTimeout);
+    
+    if (phone.length < 3) {
+        statusEl.textContent = '';
+        existingInfoEl.style.display = 'none';
+        newFormEl.style.display = 'none';
+        return;
+    }
+    
+    statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+    
+    // Debounce search
+    customerSearchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`../../api/moderator/customers.php?search=${encodeURIComponent(phone)}`);
+            const data = await response.json();
+            
+            if (data.success && data.customers.length > 0) {
+                // Find exact or partial match
+                const exactMatch = data.customers.find(c => c.phone === phone);
+                const customer = exactMatch || data.customers[0];
+                
+                // Auto-fill customer data
+                document.getElementById('selectedCustomerId').value = customer.id;
+                document.getElementById('existingCustomerName').textContent = customer.name;
+                document.getElementById('existingCustomerDetails').innerHTML = `
+                    <div><i class="fas fa-phone"></i> ${customer.phone}</div>
+                    ${customer.email ? `<div><i class="fas fa-envelope"></i> ${customer.email}</div>` : ''}
+                    ${customer.city ? `<div><i class="fas fa-map-marker-alt"></i> ${customer.city}</div>` : ''}
+                `;
+                
+                existingInfoEl.style.display = 'block';
+                newFormEl.style.display = 'none';
+                statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: #10b981;"></i> Customer found!';
+                
+                // If exact match, lock the phone input
+                if (exactMatch) {
+                    phoneInput.style.borderColor = '#10b981';
+                }
+            } else {
+                // No customer found - show new customer form
+                document.getElementById('selectedCustomerId').value = '';
+                existingInfoEl.style.display = 'none';
+                newFormEl.style.display = 'block'; // Show the new customer form
+                statusEl.innerHTML = '<i class="fas fa-info-circle" style="color: #f59e0b;"></i> Customer not found. Fill details below to create new.';
+                phoneInput.style.borderColor = '#f59e0b';
+                
+                console.log('📝 New customer form displayed - phone not found in database');
+            }
+        } catch (error) {
+            console.error('Error searching customer:', error);
+            statusEl.innerHTML = '<i class="fas fa-exclamation-circle" style="color: #ef4444;"></i> Error searching customer';
+        }
+    }, 500);
+}
+
+function toggleNewCustomerForm() {
+    const newFormEl = document.getElementById('newCustomerForm');
+    const existingInfoEl = document.getElementById('existingCustomerInfo');
+    const toggleBtn = document.getElementById('toggleCustomerBtn');
+    
+    if (newFormEl.style.display === 'none') {
+        newFormEl.style.display = 'block';
+        existingInfoEl.style.display = 'none';
+        toggleBtn.innerHTML = '<i class="fas fa-minus"></i> Cancel';
+        document.getElementById('selectedCustomerId').value = '';
+        document.getElementById('customerSearchStatus').innerHTML = '<i class="fas fa-info-circle" style="color: #3b82f6;"></i> Fill in the details to create new customer';
+    } else {
+        newFormEl.style.display = 'none';
+        toggleBtn.innerHTML = '<i class="fas fa-plus"></i> New';
+        // Clear new customer form
+        document.getElementById('newCustomerName').value = '';
+        document.getElementById('newCustomerEmail').value = '';
+        document.getElementById('newCustomerAddress').value = '';
+        document.getElementById('newCustomerCity').value = '';
+        document.getElementById('newCustomerState').value = '';
+        document.getElementById('customerSearchStatus').textContent = '';
+    }
+}
+
+function clearCustomerSelection() {
+    document.getElementById('selectedCustomerId').value = '';
+    document.getElementById('existingCustomerInfo').style.display = 'none';
+    document.getElementById('customerPhone').value = '';
+    document.getElementById('customerPhone').style.borderColor = '#e2e8f0';
+    document.getElementById('customerSearchStatus').textContent = '';
+}
+
 async function loadProductsForSelect() {
     try {
+        console.log('Loading products for select...');
         const response = await fetch('../../api/moderator/products.php?limit=1000&status=Active');
         const data = await response.json();
         
         if (data.success) {
-            const select = document.getElementById('productId');
-            data.products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product.id;
-                option.textContent = `${product.name} - ${product.sku}`;
-                option.dataset.price = product.price;
-                option.dataset.stock = product.stock_quantity;
-                select.appendChild(option);
-            });
+            // Store products globally for search
+            window.allProductsData = data.products;
+            console.log(`Successfully loaded ${data.products.length} products`);
+        } else {
+            console.error('Failed to load products:', data.message);
         }
     } catch (error) {
         console.error('Error loading products:', error);
     }
 }
 
-function updateProductDetails() {
-    const select = document.getElementById('productId');
-    const selectedOption = select.options[select.selectedIndex];
+// Live product search
+let productSearchTimeout;
+function searchProductsLive() {
+    console.log('🔍 searchProductsLive() called');
     
-    if (selectedOption.value) {
-        const price = selectedOption.dataset.price;
-        const stock = selectedOption.dataset.stock;
-        
-        document.getElementById('productDetails').style.display = 'block';
-        document.getElementById('availableStock').textContent = stock;
-        document.getElementById('unitPriceDisplay').textContent = `₹${parseFloat(price).toFixed(2)}`;
-        document.getElementById('unitPrice').value = price;
-        
-        calculateTotal();
-    } else {
-        document.getElementById('productDetails').style.display = 'none';
+    const searchInput = document.getElementById('productSearch');
+    if (!searchInput) {
+        console.error('❌ Product search input NOT found with ID: productSearch');
+        return;
     }
+    
+    console.log('✅ Search input element found:', searchInput);
+    console.log('📍 Input element details:', {
+        id: searchInput.id,
+        value: searchInput.value,
+        type: searchInput.type,
+        placeholder: searchInput.placeholder,
+        parentElement: searchInput.parentElement.className,
+        isInModal: searchInput.closest('.modal') !== null
+    });
+    
+    const searchTerm = searchInput.value.trim();
+    const resultsContainer = document.getElementById('productSearchResults');
+    
+    if (!resultsContainer) {
+        console.error('❌ Product search results container NOT found with ID: productSearchResults');
+        return;
+    }
+    
+    console.log(`📝 Search term: "${searchTerm}" (length: ${searchTerm.length})`);
+    
+    clearTimeout(productSearchTimeout);
+    
+    // Hide if empty
+    if (searchTerm.length < 1) {
+        resultsContainer.style.display = 'none';
+        resultsContainer.innerHTML = '';
+        console.log('✅ Search cleared - dropdown hidden');
+        return;
+    }
+    
+    // Show loading indicator immediately
+    resultsContainer.innerHTML = '<div class="product-search-item" style="padding: 12px; text-align: center; color: #64748b;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+    resultsContainer.style.display = 'block';
+    console.log('⏳ Loading indicator shown');
+    
+    productSearchTimeout = setTimeout(async () => {
+        console.log('⚡ Search timeout triggered - fetching results...');
+        
+        // Load products if not already loaded
+        if (!window.allProductsData || window.allProductsData.length === 0) {
+            console.log('📦 Products not loaded, fetching from API...');
+            try {
+                const response = await fetch('../../api/moderator/products.php?limit=1000&status=Active');
+                const data = await response.json();
+                
+                if (data.success && data.products) {
+                    window.allProductsData = data.products;
+                    console.log(`✅ Loaded ${data.products.length} products from API`);
+                } else {
+                    console.error('❌ API returned error:', data.message);
+                    resultsContainer.innerHTML = '<div class="product-search-item" style="padding: 12px; text-align: center; color: #ef4444;"><i class="fas fa-exclamation-circle"></i> Error loading products</div>';
+                    resultsContainer.style.display = 'block';
+                    return;
+                }
+            } catch (error) {
+                console.error('❌ Network error loading products:', error);
+                resultsContainer.innerHTML = '<div class="product-search-item" style="padding: 12px; text-align: center; color: #ef4444;"><i class="fas fa-exclamation-circle"></i> Network error</div>';
+                resultsContainer.style.display = 'block';
+                return;
+            }
+        } else {
+            console.log(`✅ Using cached products: ${window.allProductsData.length} items`);
+        }
+        
+        // Filter products
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = window.allProductsData.filter(product => 
+            product.name.toLowerCase().includes(searchLower) ||
+            (product.sku && product.sku.toLowerCase().includes(searchLower)) ||
+            (product.category && product.category.toLowerCase().includes(searchLower))
+        );
+        
+        console.log(`🔎 Found ${filtered.length} matching products`);
+        
+        if (filtered.length === 0) {
+            resultsContainer.innerHTML = '<div class="product-search-item" style="padding: 12px; text-align: center; color: #64748b;"><i class="fas fa-search"></i> No products found</div>';
+            resultsContainer.style.display = 'block';
+            console.log('📭 No results - showing empty state');
+            return;
+        }
+        
+        // Show up to 5 results
+        const displayCount = Math.min(filtered.length, 5);
+        resultsContainer.innerHTML = filtered.slice(0, 5).map(product => {
+            const safeName = escapeHtml(product.name);
+            const safeSku = product.sku ? escapeHtml(product.sku) : 'N/A';
+            const safeCategory = product.category ? escapeHtml(product.category) : '';
+            
+            return `
+            <div class="product-search-item" onclick="selectProduct(${product.id}, '${product.name.replace(/'/g, "\\'")}', ${product.price}, ${product.stock_quantity})">
+                <div class="product-name">${safeName}</div>
+                <div class="product-sku">SKU: ${safeSku}${safeCategory ? ' | ' + safeCategory : ''}</div>
+                <div class="product-details">
+                    <span><i class="fas fa-box"></i> Stock: <strong>${product.stock_quantity}</strong></span>
+                    <span><i class="fas fa-rupee-sign"></i> Price: <strong>₹${parseFloat(product.price).toFixed(2)}</strong></span>
+                </div>
+            </div>
+        `}).join('');
+        
+        // Ensure dropdown is visible
+        resultsContainer.style.display = 'block';
+        console.log(`✅ Dropdown displayed with ${displayCount} results`);
+    }, 200); // Fast response
 }
+
+function selectProduct(id, name, price, stock) {
+    console.log('Product selected:', { id, name, price, stock });
+    
+    const productIdInput = document.getElementById('productId');
+    const productSearchInput = document.getElementById('productSearch');
+    const resultsContainer = document.getElementById('productSearchResults');
+    const productDetails = document.getElementById('productDetails');
+    
+    if (!productIdInput || !productSearchInput) {
+        console.error('Product input fields not found');
+        return;
+    }
+    
+    productIdInput.value = id;
+    productSearchInput.value = name;
+    
+    // Hide and clear dropdown
+    if (resultsContainer) {
+        resultsContainer.style.display = 'none';
+        resultsContainer.innerHTML = '';
+    }
+    
+    // Show product details section
+    if (productDetails) {
+        productDetails.style.display = 'block';
+    }
+    
+    // Update product details
+    const availableStockEl = document.getElementById('availableStock');
+    const unitPriceDisplayEl = document.getElementById('unitPriceDisplay');
+    const unitPriceEl = document.getElementById('unitPrice');
+    
+    if (availableStockEl) availableStockEl.textContent = stock;
+    if (unitPriceDisplayEl) unitPriceDisplayEl.textContent = `₹${parseFloat(price).toFixed(2)}`;
+    if (unitPriceEl) unitPriceEl.value = price;
+    
+    // Show success feedback with green border flash
+    productSearchInput.style.borderColor = '#10b981';
+    productSearchInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
+    
+    setTimeout(() => {
+        productSearchInput.style.borderColor = '#e2e8f0';
+        productSearchInput.style.boxShadow = 'none';
+    }, 1500);
+    
+    // Calculate total if quantity is already filled
+    calculateTotal();
+    
+    console.log('Product selected successfully');
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Close search results when clicking outside
+document.addEventListener('click', function(e) {
+    const searchInput = document.getElementById('productSearch');
+    const resultsContainer = document.getElementById('productSearchResults');
+    
+    // Only close if both elements exist and click is outside both
+    if (searchInput && resultsContainer) {
+        const isClickInside = searchInput.contains(e.target) || resultsContainer.contains(e.target);
+        if (!isClickInside && resultsContainer.style.display === 'block') {
+            resultsContainer.style.display = 'none';
+            console.log('Dropdown closed (clicked outside)');
+        }
+    }
+});
 
 function calculateTotal() {
     const quantity = parseFloat(document.getElementById('quantity').value) || 0;
@@ -352,16 +701,116 @@ async function saveBooking() {
     }
     
     const bookingId = document.getElementById('bookingId').value;
+    let customerId = document.getElementById('selectedCustomerId').value;
+    const productId = document.getElementById('productId').value;
+    const customerPhone = document.getElementById('customerPhone').value;
+    
+    // Validate required fields
+    if (!customerPhone) {
+        showError('Customer phone number is required');
+        return;
+    }
+    
+    if (!productId) {
+        showError('Please select a product');
+        return;
+    }
+    
+    // If no existing customer selected, create new customer
+    if (!customerId) {
+        const newCustomerName = document.getElementById('newCustomerName').value;
+        const newCustomerEmail = document.getElementById('newCustomerEmail').value;
+        const newCustomerAddress = document.getElementById('newCustomerAddress').value;
+        const newCustomerCity = document.getElementById('newCustomerCity').value;
+        const newCustomerState = document.getElementById('newCustomerState').value;
+        
+        console.log('📋 New customer form values:', {
+            name: newCustomerName,
+            phone: customerPhone,
+            email: newCustomerEmail,
+            address: newCustomerAddress,
+            city: newCustomerCity,
+            state: newCustomerState
+        });
+        
+        if (!newCustomerName || newCustomerName.trim() === '') {
+            showError('Please enter customer name');
+            document.getElementById('newCustomerName').focus();
+            return;
+        }
+        
+        if (!customerPhone || customerPhone.trim() === '') {
+            showError('Please enter customer phone number');
+            document.getElementById('customerPhone').focus();
+            return;
+        }
+        
+        try {
+            // Create new customer
+            const customerData = {
+                name: newCustomerName.trim(),
+                phone: customerPhone.trim(),
+                email: newCustomerEmail ? newCustomerEmail.trim() : '',
+                address: newCustomerAddress ? newCustomerAddress.trim() : '',
+                city: newCustomerCity ? newCustomerCity.trim() : '',
+                state: newCustomerState ? newCustomerState.trim() : ''
+            };
+            
+            console.log('🚀 Sending customer data to API:', customerData);
+            
+            const response = await fetch('../../api/moderator/customers.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(customerData)
+            });
+            
+            console.log('Customer API response status:', response.status);
+            console.log('Customer API response headers:', response.headers.get('content-type'));
+            
+            // Get response text first to check if it's JSON
+            const responseText = await response.text();
+            console.log('Customer API raw response:', responseText.substring(0, 500));
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('❌ Failed to parse JSON response:', parseError);
+                console.error('Response was:', responseText);
+                showError('Server error: Invalid response format. Check console for details.');
+                return;
+            }
+            
+            console.log('Customer API response data:', data);
+            
+            if (data.success) {
+                customerId = data.customer.id;
+                console.log('✅ New customer created with ID:', customerId);
+                showSuccess('New customer created successfully!');
+            } else {
+                console.error('❌ Customer creation failed:', data);
+                showError(data.message || data.error || 'Failed to create customer');
+                return;
+            }
+        } catch (error) {
+            console.error('❌ Error creating customer:', error);
+            showError('Network error: ' + error.message);
+            return;
+        }
+    }
+    
+    // Now create/update booking
     const bookingData = {
-        customer_id: document.getElementById('customerId').value,
-        product_id: document.getElementById('productId').value,
+        customer_id: customerId,
+        product_id: productId,
         quantity: document.getElementById('quantity').value,
         unit_price: document.getElementById('unitPrice').value,
         total_amount: document.getElementById('totalAmount').value,
-        status: document.getElementById('status').value,
+        status: 'Pending', // Moderator can only create pending bookings
         priority: document.getElementById('priority').value,
         booking_date: document.getElementById('bookingDate').value,
-        delivery_date: document.getElementById('deliveryDate').value,
         notes: document.getElementById('notes').value
     };
     
@@ -485,9 +934,34 @@ async function loadBookingData(id) {
             await loadCustomersForSelect();
             await loadProductsForSelect();
             
-            // Fill form
-            document.getElementById('customerId').value = booking.customer_id;
+            // Fill customer data
+            document.getElementById('customerPhone').value = booking.customer_phone || '';
+            document.getElementById('selectedCustomerId').value = booking.customer_id;
+            
+            if (booking.customer_id) {
+                document.getElementById('existingCustomerName').textContent = booking.customer_name;
+                document.getElementById('existingCustomerDetails').innerHTML = `
+                    <div><i class="fas fa-phone"></i> ${booking.customer_phone}</div>
+                    ${booking.customer_email ? `<div><i class="fas fa-envelope"></i> ${booking.customer_email}</div>` : ''}
+                `;
+                document.getElementById('existingCustomerInfo').style.display = 'block';
+            }
+            
+            // Fill product data
             document.getElementById('productId').value = booking.product_id;
+            document.getElementById('productSearch').value = booking.product_name || '';
+            
+            // Show product details
+            if (booking.product_id) {
+                const product = window.allProductsData?.find(p => p.id == booking.product_id);
+                if (product) {
+                    document.getElementById('productDetails').style.display = 'block';
+                    document.getElementById('availableStock').textContent = product.stock_quantity;
+                    document.getElementById('unitPriceDisplay').textContent = `₹${parseFloat(product.price).toFixed(2)}`;
+                }
+            }
+            
+            // Fill other form fields
             document.getElementById('quantity').value = booking.quantity;
             document.getElementById('unitPrice').value = booking.unit_price;
             document.getElementById('totalAmount').value = booking.total_amount;
@@ -496,8 +970,6 @@ async function loadBookingData(id) {
             document.getElementById('bookingDate').value = booking.booking_date;
             document.getElementById('deliveryDate').value = booking.delivery_date || '';
             document.getElementById('notes').value = booking.notes || '';
-            
-            updateProductDetails();
         }
     } catch (error) {
         console.error('Error loading booking data:', error);
@@ -584,7 +1056,7 @@ function renderCustomersTable(customers) {
     if (!customers || customers.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
+                <td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">
                     <i class="fas fa-user-slash" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;"></i>
                     <p>No customers found</p>
                 </td>
@@ -606,7 +1078,8 @@ function renderCustomersTable(customers) {
             </td>
             <td>${customer.phone}</td>
             <td>${customer.email || 'N/A'}</td>
-            <td>${customer.total_bookings || 0}</td>
+            <td>${customer.total_orders || 0}</td>
+            <td><strong>₹${parseFloat(customer.total_spent || 0).toFixed(2)}</strong></td>
             <td><span class="badge badge-${customer.status === 'Active' ? 'green' : 'red'}">${customer.status}</span></td>
             <td>
                 <div class="action-buttons">
@@ -829,10 +1302,14 @@ function createCustomerViewModal(customer) {
                     
                     <div>
                         <h3 style="margin-bottom: 15px; color: #1e293b;">Booking Statistics</h3>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">${customer.total_bookings || 0}</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">${customer.total_orders || 0}</div>
                                 <div style="color: #64748b; font-size: 14px;">Total Orders</div>
+                            </div>
+                            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: bold; color: #059669;">₹${parseFloat(customer.total_spent || 0).toFixed(2)}</div>
+                                <div style="color: #64748b; font-size: 14px;">Total Spent</div>
                             </div>
                             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
                                 <div style="font-size: 24px; font-weight: bold; color: #10b981;">${customer.completed_bookings || 0}</div>
@@ -1019,7 +1496,7 @@ function filterProducts() {
 }
 
 function searchProducts() {
-    const searchTerm = document.getElementById('productSearch').value.toLowerCase();
+    const searchTerm = document.getElementById('productSearchFilter').value.toLowerCase();
     
     if (!searchTerm) {
         renderProductsTable(allProducts);
@@ -1660,6 +2137,15 @@ style.textContent = `
         padding: 2px 6px;
         border-radius: 10px;
         font-weight: 600;
+    }
+    
+    .form-section {
+        margin-bottom: 20px;
+    }
+    
+    .form-section h3 {
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 8px;
     }
 `;
 document.head.appendChild(style);

@@ -4,10 +4,16 @@
  * Handles all customer-related operations
  */
 
+// Start output buffering to prevent any whitespace issues
+ob_start();
+
 require_once '../../config/config.php';
 
 // Check if user is logged in and has proper role
 requireRole(['Moderator', 'Owner']);
+
+// Clean any output that may have leaked
+ob_clean();
 
 header('Content-Type: application/json');
 
@@ -33,11 +39,17 @@ try {
             throw new Exception('Method not allowed');
     }
 } catch (Exception $e) {
+    ob_clean(); // Clear any output before sending error
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => $e->getMessage(),
+        'message' => $e->getMessage()
     ]);
 }
+
+// Flush output buffer
+ob_end_flush();
+
 
 /**
  * GET - Fetch customers
@@ -80,18 +92,29 @@ function handlePost($conn, $owner_id, $user_id) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     
+    // Prepare variables for bind_param (cannot use ?? operator directly)
+    $name = $data['name'];
+    $email = $data['email'] ?? null;
+    $phone = $data['phone'];
+    $address = $data['address'] ?? null;
+    $city = $data['city'] ?? null;
+    $state = $data['state'] ?? null;
+    $postal_code = $data['postal_code'] ?? null;
+    $company = $data['company'] ?? null;
+    $notes = $data['notes'] ?? null;
+    
     $stmt->bind_param(
         "isssssssssi",
         $owner_id,
-        $data['name'],
-        $data['email'] ?? null,
-        $data['phone'],
-        $data['address'] ?? null,
-        $data['city'] ?? null,
-        $data['state'] ?? null,
-        $data['postal_code'] ?? null,
-        $data['company'] ?? null,
-        $data['notes'] ?? null,
+        $name,
+        $email,
+        $phone,
+        $address,
+        $city,
+        $state,
+        $postal_code,
+        $company,
+        $notes,
         $user_id
     );
     
@@ -140,19 +163,32 @@ function handlePut($conn, $owner_id) {
         WHERE id = ? AND owner_id = ?
     ");
     
+    // Prepare variables for bind_param
+    $name = $data['name'];
+    $email = $data['email'] ?? null;
+    $phone = $data['phone'];
+    $address = $data['address'] ?? null;
+    $city = $data['city'] ?? null;
+    $state = $data['state'] ?? null;
+    $postal_code = $data['postal_code'] ?? null;
+    $company = $data['company'] ?? null;
+    $status = $data['status'] ?? 'Active';
+    $notes = $data['notes'] ?? null;
+    $customer_id = $data['id'];
+    
     $stmt->bind_param(
         "ssssssssssii",
-        $data['name'],
-        $data['email'] ?? null,
-        $data['phone'],
-        $data['address'] ?? null,
-        $data['city'] ?? null,
-        $data['state'] ?? null,
-        $data['postal_code'] ?? null,
-        $data['company'] ?? null,
-        $data['status'] ?? 'Active',
-        $data['notes'] ?? null,
-        $data['id'],
+        $name,
+        $email,
+        $phone,
+        $address,
+        $city,
+        $state,
+        $postal_code,
+        $company,
+        $status,
+        $notes,
+        $customer_id,
         $owner_id
     );
     
