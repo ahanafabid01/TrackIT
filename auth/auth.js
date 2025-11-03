@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showSuccess('loginSuccess', data.message);
                 setTimeout(() => {
-                    window.location.href = '../main/dashboard.php';
+                    window.location.href = data.redirect;
                 }, 1500);
             } else {
                 showError('loginError', data.message);

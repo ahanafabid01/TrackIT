@@ -1,24 +1,25 @@
 <?php
 require_once '../config/config.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../auth/auth.php");
-    exit();
-}
+// Check if user is logged in and is an Owner
+requireRole(['Owner']);
 
+$user_id = $_SESSION['user_id'];
 $user_name = $_SESSION['user_name'];
 $user_email = $_SESSION['user_email'];
 
-$users_query = "SELECT id, name, email, role, status, created_at FROM users WHERE role != 'User' ORDER BY created_at DESC";
+// Get users belonging to this owner only (excluding the owner themselves and only their team)
+$users_query = "SELECT id, name, email, role, status, created_at FROM users 
+                WHERE owner_id = $user_id 
+                ORDER BY created_at DESC";
 $users_result = mysqli_query($conn, $users_query);
 $users = [];
 while ($row = mysqli_fetch_assoc($users_result)) {
     $users[] = $row;
 }
 
-// Get statistics (exclude 'User' role)
-$count_query = "SELECT COUNT(*) FROM users WHERE role != 'User'";
+// Get statistics (only for this owner's team)
+$count_query = "SELECT COUNT(*) FROM users WHERE owner_id = $user_id";
 $count_result = mysqli_query($conn, $count_query);
 $total_users = mysqli_fetch_row($count_result)[0];
 ?>
@@ -92,7 +93,7 @@ $total_users = mysqli_fetch_row($count_result)[0];
                     </div>
                     <div class="user-info">
                         <div class="user-name"><?php echo htmlspecialchars($user_name); ?></div>
-                        <div class="user-role">Administrator</div>
+                        <div class="user-role">Owner</div>
                     </div>
                     <i class="fas fa-chevron-down" style="color: #94a3b8; font-size: 12px;"></i>
                 </div>

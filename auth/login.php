@@ -17,17 +17,33 @@ try {
         
         // Verify password
         if (password_verify($password, $user['password'])) {
+            // Check if user is active
+            if ($user['status'] !== 'Active') {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Your account has been ' . strtolower($user['status']) . '. Please contact the administrator.'
+                ]);
+                exit;
+            }
+            
             // Set session variables
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_email'] = $user['email'];
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['owner_id'] = $user['owner_id']; // Will be NULL for Owners
+            $_SESSION['profile_picture'] = $user['profile_picture'];
             
             // Update last login time
             mysqli_query($conn, "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = " . $user['id']);
             
+            // Get redirect URL based on role
+            $redirectUrl = redirectToDashboard($user['role']);
+            
             echo json_encode([
                 'success' => true, 
-                'message' => 'Login successful! Redirecting...'
+                'message' => 'Login successful! Redirecting...',
+                'redirect' => $redirectUrl
             ]);
         } else {
             echo json_encode([

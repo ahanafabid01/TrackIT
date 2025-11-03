@@ -62,16 +62,19 @@ mysqli_stmt_close($stmt);
 // Hash password
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-// Set parent_id to the current user's id (from session), except for main 'User' role
-// session already started above
-$parent_id = null;
-if (isset($_SESSION['user_id']) && $role !== 'User') {
-    $parent_id = $_SESSION['user_id'];
+// Set owner_id to the current logged-in Owner's user_id
+// Only Owner can create role-based users, so use their ID
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Owner') {
+    $buf = ob_get_clean();
+    if (!empty($buf)) error_log("add_user.php unexpected output: " . $buf);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized. Only owners can create users.']);
+    exit;
 }
 
-// Insert user with parent_id
-// Prepare insert; validate prepare() result
-$stmt = mysqli_prepare($conn, "INSERT INTO users (name, email, password, role, status, parent_id) VALUES (?, ?, ?, ?, ?, ?)");
+$owner_id = $_SESSION['user_id'];
+
+// Insert user with owner_id
+$stmt = mysqli_prepare($conn, "INSERT INTO users (name, email, password, role, status, owner_id) VALUES (?, ?, ?, ?, ?, ?)");
 $status = 'Active';
 if (!$stmt) {
     $buf = ob_get_clean();
@@ -81,7 +84,7 @@ if (!$stmt) {
     echo json_encode(['success' => false, 'message' => 'Database error.']);
     exit;
 }
-mysqli_stmt_bind_param($stmt, 'sssssi', $name, $email, $hashed_password, $role, $status, $parent_id);
+mysqli_stmt_bind_param($stmt, 'sssssi', $name, $email, $hashed_password, $role, $status, $owner_id);
 $success = mysqli_stmt_execute($stmt);
 
 // Clean and log any buffered unexpected output before returning JSON

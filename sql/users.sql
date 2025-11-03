@@ -28,44 +28,39 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) DEFAULT NULL,
+  `role` enum('Owner','Moderator','Accountant','Admin In-charge','Store In-charge') NOT NULL DEFAULT 'Owner',
+  `owner_id` int(11) DEFAULT NULL COMMENT 'References the owner user_id. NULL for Owners, set for role-based users',
+  `status` enum('Active','Inactive','Suspended') NOT NULL DEFAULT 'Active',
   `oauth_provider` varchar(50) DEFAULT NULL,
   `oauth_uid` varchar(100) DEFAULT NULL,
   `profile_picture` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `last_login` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `last_login` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_owner_id` (`owner_id`),
+  KEY `idx_role` (`role`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `users`
---
-
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `oauth_provider`, `oauth_uid`, `profile_picture`, `created_at`, `last_login`) VALUES
-(1, 'Ahanaf Abid Sazid', 'srsrizon665@gmail.com', '$2y$10$WF8VKavUMyKBC18rzP6oZ.bq9Jg53NYwUMVOpNMKZ39ekmQwoszKq', NULL, NULL, NULL, '2025-10-27 14:21:28', '2025-10-28 15:41:12');
-
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `users`
+-- Add foreign key constraint after table creation
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD CONSTRAINT `fk_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- AUTO_INCREMENT for dumped tables
+-- Dumping data for table `users` (Sample data - Optional)
 --
 
+-- Uncomment the line below if you want sample data
+-- INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `owner_id`, `status`, `oauth_provider`, `oauth_uid`, `profile_picture`, `created_at`, `last_login`) VALUES
+-- (1, 'Sample Owner', 'owner@example.com', '$2y$10$WF8VKavUMyKBC18rzP6oZ.bq9Jg53NYwUMVOpNMKZ39ekmQwoszKq', 'Owner', NULL, 'Active', NULL, NULL, NULL, '2025-11-03 00:00:00', NULL);
+
 --
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
