@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 03, 2025 at 10:16 PM
+-- Generation Time: Nov 04, 2025 at 12:08 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -36,7 +36,7 @@ CREATE TABLE `bookings` (
   `quantity` int(11) NOT NULL DEFAULT 1,
   `unit_price` decimal(10,2) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL,
-  `status` enum('Pending','Confirmed','Processing','Ready','Delivered','Cancelled','Rejected') NOT NULL DEFAULT 'Pending',
+  `status` enum('Pending','Confirmed','Processing','Ready','Delivered','Return','Cancelled','Rejected') NOT NULL DEFAULT 'Pending',
   `priority` enum('Low','Normal','High','Urgent') NOT NULL DEFAULT 'Normal',
   `booking_date` date NOT NULL,
   `delivery_date` date DEFAULT NULL,
@@ -56,16 +56,16 @@ CREATE TABLE `bookings` (
 
 INSERT INTO `bookings` (`id`, `booking_number`, `owner_id`, `customer_id`, `product_id`, `quantity`, `unit_price`, `total_amount`, `status`, `priority`, `booking_date`, `delivery_date`, `notes`, `internal_notes`, `confirmation_sent`, `reminder_sent`, `created_by`, `assigned_to`, `created_at`, `updated_at`) VALUES
 (1, 'BK-001', 1, 1, 1, 2, 2500.00, 5000.00, 'Confirmed', 'Normal', '2025-11-03', '2025-11-10', 'Customer wants delivery before 5 PM', NULL, 0, 0, 10, NULL, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
-(2, 'BK-002', 1, 2, 2, 5, 1200.00, 6000.00, 'Pending', 'High', '2025-11-02', '2025-11-08', 'Urgent order for office setup', NULL, 0, 0, 10, NULL, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
+(2, 'BK-002', 1, 2, 2, 5, 1200.00, 6000.00, 'Delivered', 'High', '2025-11-02', '2025-11-04', 'Urgent order for office setup', NULL, 0, 0, 10, 11, '2025-11-03 16:55:26', '2025-11-03 22:57:45'),
 (3, 'BK-003', 1, 1, 3, 3, 3500.00, 10500.00, 'Processing', 'Normal', '2025-11-01', '2025-11-07', NULL, NULL, 0, 0, 10, NULL, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
 (4, 'BK-004', 1, 3, 5, 1, 3200.00, 3200.00, 'Confirmed', 'Normal', '2025-10-30', '2025-11-05', 'Gift wrap requested', NULL, 0, 0, 10, NULL, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
 (5, 'BK-005', 1, 4, 6, 10, 800.00, 8000.00, 'Delivered', 'Low', '2025-10-28', '2025-11-02', 'Bulk order completed', NULL, 0, 0, 10, NULL, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
-(7, 'BK-007', 1, 4, 1, 4, 2500.00, 10000.00, 'Ready', 'High', '2025-11-03', '2025-11-06', 'Ready for pickup', NULL, 0, 0, 10, NULL, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
+(7, 'BK-007', 1, 4, 1, 4, 2500.00, 10000.00, 'Cancelled', 'High', '2025-11-03', '2025-11-06', 'Ready for pickup', NULL, 0, 0, 10, 11, '2025-11-03 16:55:26', '2025-11-03 23:05:53'),
 (8, 'BK-008', 1, 8, 1, 24, 2500.00, 60000.00, 'Pending', 'Normal', '2025-11-03', '2025-11-14', '', NULL, 0, 0, 10, NULL, '2025-11-03 19:44:29', '2025-11-03 19:44:29'),
-(9, 'BK-009', 1, 8, 6, 1, 800.00, 800.00, 'Pending', 'High', '2025-11-03', NULL, '', NULL, 0, 0, 10, NULL, '2025-11-03 20:16:50', '2025-11-03 20:24:23'),
-(10, 'BK-010', 1, 8, 1, 1, 2500.00, 2500.00, 'Pending', 'Normal', '2025-11-03', NULL, '', NULL, 0, 0, 10, NULL, '2025-11-03 20:30:12', '2025-11-03 20:30:12'),
-(11, 'BK-011', 1, 10, 1, 2, 2500.00, 5000.00, 'Pending', 'Normal', '2025-11-03', NULL, '', NULL, 0, 0, 10, NULL, '2025-11-03 20:35:20', '2025-11-03 20:35:20'),
-(12, 'BK-012', 1, 8, 6, 10, 800.00, 8000.00, 'Pending', 'Normal', '2025-11-03', NULL, '', NULL, 0, 0, 10, NULL, '2025-11-03 20:47:00', '2025-11-03 20:47:00');
+(9, 'BK-009', 1, 8, 6, 1, 800.00, 800.00, 'Confirmed', 'High', '2025-11-03', NULL, '', NULL, 0, 0, 10, 11, '2025-11-03 20:16:50', '2025-11-03 23:02:34'),
+(10, 'BK-010', 1, 8, 1, 1, 2500.00, 2500.00, 'Ready', 'Normal', '2025-11-03', NULL, '', NULL, 0, 0, 10, 11, '2025-11-03 20:30:12', '2025-11-03 21:35:47'),
+(11, 'BK-011', 1, 10, 1, 2, 2500.00, 5000.00, 'Delivered', 'Normal', '2025-11-03', '2025-11-04', '', NULL, 0, 0, 10, 11, '2025-11-03 20:35:20', '2025-11-03 21:33:49'),
+(12, 'BK-012', 1, 8, 6, 10, 800.00, 8000.00, 'Cancelled', 'Normal', '2025-11-03', NULL, '', NULL, 0, 0, 10, 11, '2025-11-03 20:47:00', '2025-11-03 21:35:13');
 
 -- --------------------------------------------------------
 
@@ -95,7 +95,24 @@ INSERT INTO `booking_history` (`id`, `booking_id`, `previous_status`, `new_statu
 (6, 9, NULL, 'Pending', 10, 'Booking created', '2025-11-03 20:16:50'),
 (7, 10, NULL, 'Pending', 10, 'Booking created', '2025-11-03 20:30:13'),
 (8, 11, NULL, 'Pending', 10, 'Booking created', '2025-11-03 20:35:20'),
-(9, 12, NULL, 'Pending', 10, 'Booking created', '2025-11-03 20:47:00');
+(9, 12, NULL, 'Pending', 10, 'Booking created', '2025-11-03 20:47:00'),
+(10, 2, 'Pending', 'Confirmed', 11, 'Booking confirmed by Store In-charge', '2025-11-03 21:24:22'),
+(11, 11, 'Pending', 'Confirmed', 11, 'Status changed to Confirmed', '2025-11-03 21:33:29'),
+(12, 11, 'Confirmed', 'Processing', 11, 'Status changed to Processing', '2025-11-03 21:33:38'),
+(13, 11, 'Processing', 'Ready', 11, 'Status changed to Ready', '2025-11-03 21:33:45'),
+(14, 11, 'Ready', 'Delivered', 11, 'Status changed to Delivered', '2025-11-03 21:33:49'),
+(15, 12, 'Pending', 'Confirmed', 11, 'Status changed to Confirmed', '2025-11-03 21:34:46'),
+(16, 12, 'Confirmed', 'Processing', 11, 'Status changed to Processing', '2025-11-03 21:34:51'),
+(17, 12, 'Processing', 'Ready', 11, 'Status changed to Ready', '2025-11-03 21:34:57'),
+(18, 12, 'Ready', 'Cancelled', 11, 'return', '2025-11-03 21:35:13'),
+(19, 10, 'Pending', 'Confirmed', 11, 'Status changed to Confirmed', '2025-11-03 21:35:33'),
+(20, 10, 'Confirmed', 'Processing', 11, 'Status changed to Processing', '2025-11-03 21:35:36'),
+(21, 10, 'Processing', 'Ready', 11, 'Status changed to Ready', '2025-11-03 21:35:47'),
+(22, 2, 'Confirmed', 'Processing', 11, 'Status changed to Processing', '2025-11-03 22:57:03'),
+(23, 2, 'Processing', 'Ready', 11, 'Status changed to Ready', '2025-11-03 22:57:07'),
+(24, 2, 'Ready', 'Delivered', 11, 'Status changed to Delivered', '2025-11-03 22:57:45'),
+(25, 9, 'Pending', 'Confirmed', 11, 'Status changed to Confirmed', '2025-11-03 23:02:34'),
+(26, 7, 'Ready', 'Cancelled', 11, 'for some reason', '2025-11-03 23:05:53');
 
 -- --------------------------------------------------------
 
@@ -295,12 +312,12 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `owner_id`, `name`, `sku`, `description`, `category`, `price`, `cost`, `stock_quantity`, `low_stock_threshold`, `unit`, `status`, `image_url`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Premium Laptop Stand', 'SKU-001', 'Ergonomic aluminum laptop stand with adjustable height', 'Office Accessories', 2500.00, 1800.00, 45, 10, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
+(1, 1, 'Premium Laptop Stand', 'SKU-001', 'Ergonomic aluminum laptop stand with adjustable height', 'Office Accessories', 2500.00, 1800.00, 49, 10, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 23:05:53'),
 (2, 1, 'Wireless Mouse Pro', 'SKU-002', 'Bluetooth wireless mouse with ergonomic design', 'Computer Peripherals', 1200.00, 800.00, 8, 15, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
 (3, 1, 'USB-C Hub 7-in-1', 'SKU-003', 'Multi-port USB-C hub with HDMI, USB 3.0, SD card reader', 'Computer Peripherals', 3500.00, 2400.00, 120, 20, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
 (4, 1, 'Mechanical Keyboard RGB', 'SKU-004', 'Gaming mechanical keyboard with RGB backlighting', 'Computer Peripherals', 4500.00, 3200.00, 0, 10, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
 (5, 1, 'Webcam 1080p HD', 'SKU-005', 'Full HD webcam with built-in microphone', 'Computer Peripherals', 3200.00, 2100.00, 32, 15, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
-(6, 1, 'Monitor Screen Protector', 'SKU-006', 'Anti-glare screen protector for 24-inch monitors', 'Office Accessories', 800.00, 450.00, 68, 25, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 20:47:00');
+(6, 1, 'Monitor Screen Protector', 'SKU-006', 'Anti-glare screen protector for 24-inch monitors', 'Office Accessories', 800.00, 450.00, 78, 25, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 21:35:13');
 
 -- --------------------------------------------------------
 
@@ -385,9 +402,9 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `phone`, `role`, `owner_id`, `status`, `profile_picture`, `last_login`, `created_at`, `updated_at`) VALUES
 (1, 'Ahanaf Abid Sazid', 'srsrizon665@gmail.com', '$2y$10$JooP0F7doRrn5kXtJYQf9OPPkJmcNePu9ZYxG4YKRY4Kgm8tNsLta', NULL, 'Owner', NULL, 'Active', NULL, '2025-11-03 20:48:15', '2025-11-03 15:22:45', '2025-11-03 20:48:15'),
 (8, 'Ahanaf Abid Sazid', 'ext.ahanaf@gmail.com', '$2y$10$vPCQquZNIqT6oqA6xJAG/uTsYqfXDTraPskkUwq340mrAiTdMdwmO', NULL, 'Owner', NULL, 'Active', NULL, NULL, '2025-11-03 16:20:59', '2025-11-03 16:20:59'),
-(9, 'Ahanaf Abid Sazid', 'ahanaf.abid.sazid@g.bracu.ac.bd', '$2y$10$MBBka9MFn/ObK/owJSnB0.ZVEEoTNhXTnjaxeYFkfq1oHqRqFpLoi', NULL, 'Accountant', 1, 'Active', NULL, '2025-11-03 16:25:55', '2025-11-03 16:25:42', '2025-11-03 16:25:55'),
-(10, 'Mr. accountant', 'ext.ahanaf.abid@gmail.com', '$2y$10$GUN1V8COnltfp4Gccz1k/e5b5ZSClsE0V1FOqd1nnzXtoMQnJrbJe', NULL, 'Moderator', 1, 'Active', NULL, '2025-11-03 18:19:23', '2025-11-03 16:27:28', '2025-11-03 18:19:23'),
-(11, 'Mr. Store man', 'ext.ahan@gmail.com', '$2y$10$om82Uzx/YY5qYHaLjsggCOnRD1WzZfFhnP8RDnPtKOTqxlD/UUz9q', NULL, 'Store In-charge', 1, 'Active', NULL, '2025-11-03 21:15:59', '2025-11-03 20:48:45', '2025-11-03 21:15:59');
+(9, 'Ahanaf Abid Sazid', 'ahanaf.abid.sazid@g.bracu.ac.bd', '$2y$10$MBBka9MFn/ObK/owJSnB0.ZVEEoTNhXTnjaxeYFkfq1oHqRqFpLoi', NULL, 'Accountant', 1, 'Active', NULL, '2025-11-03 21:37:45', '2025-11-03 16:25:42', '2025-11-03 21:37:45'),
+(10, 'Mr. accountant', 'ext.ahanaf.abid@gmail.com', '$2y$10$GUN1V8COnltfp4Gccz1k/e5b5ZSClsE0V1FOqd1nnzXtoMQnJrbJe', NULL, 'Moderator', 1, 'Active', NULL, '2025-11-03 21:37:54', '2025-11-03 16:27:28', '2025-11-03 21:37:54'),
+(11, 'Mr. Store man', 'ext.ahan@gmail.com', '$2y$10$om82Uzx/YY5qYHaLjsggCOnRD1WzZfFhnP8RDnPtKOTqxlD/UUz9q', NULL, 'Store In-charge', 1, 'Active', NULL, '2025-11-03 21:52:59', '2025-11-03 20:48:45', '2025-11-03 21:52:59');
 
 --
 -- Indexes for dumped tables
@@ -541,7 +558,7 @@ ALTER TABLE `bookings`
 -- AUTO_INCREMENT for table `booking_history`
 --
 ALTER TABLE `booking_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `booking_reminders`

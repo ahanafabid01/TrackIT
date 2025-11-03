@@ -333,56 +333,43 @@ function renderBookingRequests(bookings) {
         const priorityClass = booking.priority.toLowerCase();
         const statusClass = booking.status.toLowerCase().replace(' ', '-');
         
-        // Determine next available actions based on current status
-        let actionButtons = '';
+        // Define valid status transitions
+        const validTransitions = {
+            'Pending': ['Pending', 'Confirmed', 'Rejected'],
+            'Confirmed': ['Confirmed', 'Processing', 'Cancelled'],
+            'Processing': ['Processing', 'Ready', 'Cancelled'],
+            'Ready': ['Ready', 'Delivered', 'Cancelled'],
+            'Delivered': ['Delivered', 'Return'], // Can move to Return if customer returns product
+            'Return': ['Return'], // Final state - return completed
+            'Cancelled': ['Cancelled'], // Final state - no changes allowed
+            'Rejected': ['Rejected']  // Final state - no changes allowed
+        };
         
-        switch(booking.status) {
-            case 'Pending':
-                actionButtons = `
-                    <button class="btn btn-sm btn-success" onclick="updateBookingStatus(${booking.id}, 'Confirmed', '${booking.booking_number}')">
-                        <i class="fas fa-check"></i> Confirm
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="updateBookingStatus(${booking.id}, 'Rejected', '${booking.booking_number}')">
-                        <i class="fas fa-times"></i> Reject
-                    </button>
-                `;
-                break;
-            case 'Confirmed':
-                actionButtons = `
-                    <button class="btn btn-sm btn-primary" onclick="updateBookingStatus(${booking.id}, 'Processing', '${booking.booking_number}')">
-                        <i class="fas fa-cog"></i> Start Processing
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="updateBookingStatus(${booking.id}, 'Cancelled', '${booking.booking_number}')">
-                        <i class="fas fa-ban"></i> Cancel
-                    </button>
-                `;
-                break;
-            case 'Processing':
-                actionButtons = `
-                    <button class="btn btn-sm btn-success" onclick="updateBookingStatus(${booking.id}, 'Ready', '${booking.booking_number}')">
-                        <i class="fas fa-box-check"></i> Mark Ready
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="updateBookingStatus(${booking.id}, 'Delivered', '${booking.booking_number}')">
-                        <i class="fas fa-truck"></i> Deliver
-                    </button>
-                `;
-                break;
-            case 'Ready':
-                actionButtons = `
-                    <button class="btn btn-sm btn-info" onclick="updateBookingStatus(${booking.id}, 'Delivered', '${booking.booking_number}')">
-                        <i class="fas fa-truck"></i> Mark Delivered
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="updateBookingStatus(${booking.id}, 'Cancelled', '${booking.booking_number}')">
-                        <i class="fas fa-ban"></i> Cancel
-                    </button>
-                `;
-                break;
-            case 'Cancelled':
-                actionButtons = `<span class="text-muted"><i class="fas fa-ban"></i> Cancelled</span>`;
-                break;
-            default:
-                actionButtons = `<span class="text-muted">${booking.status}</span>`;
-        }
+        // Get allowed statuses for current booking status
+        const allowedStatuses = validTransitions[booking.status] || [booking.status];
+        
+        // Create status dropdown with all statuses, but disable invalid ones
+        const statuses = ['Pending', 'Confirmed', 'Processing', 'Ready', 'Delivered', 'Return', 'Cancelled', 'Rejected'];
+        const statusOptions = statuses.map(status => {
+            const isAllowed = allowedStatuses.includes(status);
+            const isSelected = status === booking.status;
+            return `<option value="${status}" 
+                            ${isSelected ? 'selected' : ''} 
+                            ${!isAllowed ? 'disabled style="background: #f3f4f6; color: #9ca3af;"' : ''}>
+                        ${status}${!isAllowed ? ' 🚫' : ''}
+                    </option>`;
+        }).join('');
+        
+        const actionButtons = `
+            <select class="status-dropdown" 
+                    data-booking-id="${booking.id}" 
+                    data-booking-number="${booking.booking_number}"
+                    data-current-status="${booking.status}"
+                    onchange="handleBookingStatusChange(this)"
+                    style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; cursor: pointer; background: white; min-width: 130px;">
+                ${statusOptions}
+            </select>
+        `;
         
         return `
             <tr>
@@ -434,6 +421,55 @@ async function updateBookingStatus(bookingId, newStatus, bookingNumber) {
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
+}
+
+// Handle Booking Status Change from Dropdown
+function handleBookingStatusChange(selectElement) {
+    const bookingId = selectElement.getAttribute('data-booking-id');
+    const bookingNumber = selectElement.getAttribute('data-booking-number');
+    const currentStatus = selectElement.getAttribute('data-current-status');
+    const newStatus = selectElement.value;
+    const oldStatus = selectElement.getAttribute('data-old-status') || currentStatus;
+    
+    // Store the old value in case user cancels
+    if (!selectElement.getAttribute('data-old-status')) {
+        selectElement.setAttribute('data-old-status', currentStatus);
+    }
+    
+    // If status hasn't changed, do nothing
+    if (newStatus === oldStatus) {
+        return;
+    }
+    
+    // Define valid transitions
+    const validTransitions = {
+        'Pending': ['Confirmed', 'Rejected'],
+        'Confirmed': ['Processing', 'Cancelled'],
+        'Processing': ['Ready', 'Cancelled'],
+        'Ready': ['Delivered', 'Cancelled'],
+        'Delivered': ['Return'], // Can only move to Return from Delivered
+        'Return': [], // Final state - return completed, no further changes
+        'Cancelled': [], // Final state - no changes allowed
+        'Rejected': []  // Final state - no changes allowed
+    };
+    
+    // Check if transition is valid
+    const allowedTransitions = validTransitions[currentStatus] || [];
+    if (!allowedTransitions.includes(newStatus)) {
+        showNotification(`Cannot change status from ${currentStatus} to ${newStatus}. Invalid transition.`, 'error');
+        selectElement.value = oldStatus;
+        return;
+    }
+    
+    // Update the status with proper error handling
+    updateBookingStatus(bookingId, newStatus, bookingNumber).then(() => {
+        // Update the stored old status on success
+        selectElement.setAttribute('data-old-status', newStatus);
+        selectElement.setAttribute('data-current-status', newStatus);
+    }).catch(() => {
+        // Revert dropdown on error
+        selectElement.value = oldStatus;
+    });
 }
 
 // Legacy functions for backward compatibility
