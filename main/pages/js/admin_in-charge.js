@@ -261,14 +261,144 @@ function renderGRNTable(grns) {
 
 async function viewGRNDetails(grnId) {
     try {
+        console.log('Loading GRN details for ID:', grnId);
         const response = await fetchAPI(`../../api/admin_incharge/grn.php?id=${grnId}`);
-        if (response.success && response.data) {
-            showNotification('GRN details loaded', 'info');
-            // TODO: Show details modal
+        
+        if (response.success && response.grn) {
+            const grn = response.grn;
+            console.log('GRN data:', grn);
+            
+            // Populate header info
+            document.getElementById('grnDetailNumber').textContent = grn.grn_number || 'N/A';
+            document.getElementById('grnModalSubtitle').textContent = `GRN: ${grn.grn_number || 'N/A'}`;
+            
+            // Status badge
+            const statusBadge = document.getElementById('grnDetailStatus');
+            const statusClass = grn.status === 'Approved' ? 'badge-green' :
+                               grn.status === 'Verified' ? 'badge-blue' :
+                               grn.status === 'Rejected' ? 'badge-red' : 'badge-gray';
+            statusBadge.className = `badge ${statusClass}`;
+            statusBadge.textContent = grn.status || 'Draft';
+            
+            // Dates
+            document.getElementById('grnDetailReceivedDate').textContent = 
+                grn.received_date ? new Date(grn.received_date).toLocaleDateString('en-GB') : 'N/A';
+            document.getElementById('grnDetailInvoiceDate').textContent = 
+                grn.invoice_date ? new Date(grn.invoice_date).toLocaleDateString('en-GB') : 'N/A';
+            document.getElementById('grnDetailInvoiceNumber').textContent = grn.invoice_number || 'N/A';
+            document.getElementById('grnDetailPONumber').textContent = grn.purchase_order_number || 'N/A';
+            
+            // Supplier information
+            document.getElementById('grnDetailSupplierName').textContent = grn.supplier_name || grn.company_name || 'N/A';
+            document.getElementById('grnDetailSupplierContact').textContent = grn.contact_person || 'N/A';
+            document.getElementById('grnDetailSupplierPhone').textContent = grn.phone || 'N/A';
+            document.getElementById('grnDetailSupplierEmail').textContent = grn.email || 'N/A';
+            
+            // Warehouse and payment
+            document.getElementById('grnDetailWarehouse').textContent = grn.warehouse_location || 'Default Warehouse';
+            
+            const paymentStatusBadge = document.getElementById('grnDetailPaymentStatus');
+            const paymentClass = grn.payment_status === 'Paid' ? 'badge-green' :
+                                grn.payment_status === 'Partial' ? 'badge-orange' : 'badge-red';
+            paymentStatusBadge.className = `badge ${paymentClass}`;
+            paymentStatusBadge.textContent = grn.payment_status || 'Pending';
+            
+            // Financial summary
+            const subtotal = parseFloat(grn.total_amount || 0);
+            const taxAmount = parseFloat(grn.tax_amount || 0);
+            const discountAmount = parseFloat(grn.discount_amount || 0);
+            const netAmount = parseFloat(grn.net_amount || 0);
+            
+            document.getElementById('grnDetailSubtotal').textContent = 
+                '৳' + subtotal.toLocaleString('en-BD', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('grnDetailTax').textContent = 
+                '৳' + taxAmount.toLocaleString('en-BD', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('grnDetailDiscount').textContent = 
+                '৳' + discountAmount.toLocaleString('en-BD', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('grnDetailNetAmount').textContent = 
+                '৳' + netAmount.toLocaleString('en-BD', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            // Additional info
+            document.getElementById('grnDetailNotes').textContent = grn.notes || 'No notes provided';
+            document.getElementById('grnDetailReceivedBy').textContent = grn.received_by_name || 'N/A';
+            document.getElementById('grnDetailVerifiedBy').textContent = grn.verified_by_name || 'Not verified';
+            document.getElementById('grnDetailApprovedBy').textContent = grn.approved_by_name || 'Not approved';
+            
+            // Populate items table
+            const itemsBody = document.getElementById('grnDetailItemsBody');
+            if (grn.items && grn.items.length > 0) {
+                itemsBody.innerHTML = grn.items.map((item, index) => {
+                    // Use the actual fields from grn_items table
+                    const quantityReceived = parseFloat(item.quantity_received || 0);
+                    const quantityAccepted = parseFloat(item.quantity_accepted || 0);
+                    const quantityRejected = parseFloat(item.quantity_rejected || 0);
+                    const unitCost = parseFloat(item.unit_cost || 0);
+                    const itemTotal = parseFloat(item.total_cost || 0); // Use the stored total_cost
+                    const expiryDate = item.expiry_date ? new Date(item.expiry_date).toLocaleDateString('en-GB') : 'N/A';
+                    
+                    return `
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 12px;">${index + 1}</td>
+                            <td style="padding: 12px;">
+                                <div style="font-weight: 600; color: #1e293b;">${escapeHtml(item.product_name || 'N/A')}</div>
+                                ${item.sku ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">SKU: ${escapeHtml(item.sku)}</div>` : ''}
+                            </td>
+                            <td style="padding: 12px; text-align: center;">
+                                <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                    ${escapeHtml(item.batch_number || 'N/A')}
+                                </span>
+                            </td>
+                            <td style="padding: 12px; text-align: center; font-weight: 600;">
+                                <div style="color: #1e293b;">${quantityReceived.toLocaleString()} ${item.unit || 'pcs'}</div>
+                                ${quantityRejected > 0 ? `
+                                    <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">
+                                        <span style="color: #10b981;">✓ ${quantityAccepted}</span> / 
+                                        <span style="color: #ef4444;">✗ ${quantityRejected}</span>
+                                    </div>
+                                ` : ''}
+                            </td>
+                            <td style="padding: 12px; text-align: right; font-weight: 600;">
+                                ৳${unitCost.toLocaleString('en-BD', {minimumFractionDigits: 2})}
+                            </td>
+                            <td style="padding: 12px; text-align: right; font-weight: 700; color: #3b82f6;">
+                                ৳${itemTotal.toLocaleString('en-BD', {minimumFractionDigits: 2})}
+                            </td>
+                            <td style="padding: 12px; text-align: center; font-size: 13px;">
+                                ${expiryDate}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                itemsBody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #6b7280;">No items found</td></tr>';
+            }
+            
+            // Show the modal
+            const modal = document.getElementById('viewGRNModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+            
+            showNotification('GRN details loaded successfully', 'success');
+        } else {
+            showNotification('Failed to load GRN details', 'error');
         }
     } catch (error) {
         console.error('Failed to load GRN details:', error);
+        showNotification('Error loading GRN details: ' + error.message, 'error');
     }
+}
+
+function closeViewGRNModal() {
+    const modal = document.getElementById('viewGRNModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function printGRN() {
+    showNotification('Print functionality coming soon', 'info');
+    // TODO: Implement print functionality
 }
 
 async function verifyGRN(grnId) {
@@ -893,6 +1023,9 @@ async function handleAddStock(event) {
         window.showStockAdjustModal = showStockAdjustModal;
         window.closeModal = closeModal;
         window.showCurrentStock = showCurrentStock;
+        window.viewGRNDetails = viewGRNDetails;
+        window.closeViewGRNModal = closeViewGRNModal;
+        window.printGRN = printGRN;
         console.log('Modal functions exposed on window for debugging');
     } catch (e) {
         console.warn('Failed to expose modal globals', e);
@@ -1671,6 +1804,23 @@ function closeModal(modalId) {
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
+    }
+    
+    // Close modals when clicking on the modal background
+    if (event.target.id === 'viewGRNModal') {
+        closeViewGRNModal();
+    }
+    if (event.target.id === 'addStockModal') {
+        closeAddStockModal();
+    }
+    if (event.target.id === 'createGRNModal') {
+        closeGRNModal();
+    }
+    if (event.target.id === 'quickAddProductModal') {
+        closeQuickAddProductModal();
+    }
+    if (event.target.id === 'createSupplierModal') {
+        closeCreateSupplierModal();
     }
 }
 

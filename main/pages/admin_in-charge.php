@@ -916,6 +916,188 @@ $owner_id = getOwnerId();
         </div>
     </div>
 
+    <!-- View GRN Details Modal -->
+    <div id="viewGRNModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center; overflow-y: auto;">
+        <div style="background: white; border-radius: 15px; max-width: 1000px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: 20px;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 25px; border-radius: 15px 15px 0 0; position: sticky; top: 0; z-index: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">
+                            <i class="fas fa-file-invoice"></i> GRN Details
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 13px;" id="grnModalSubtitle">View Goods Received Note information</p>
+                    </div>
+                    <button onclick="closeViewGRNModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: all 0.3s;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 30px;">
+                <!-- GRN Header Info -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; padding: 20px; background: #f8fafc; border-radius: 10px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">GRN NUMBER</label>
+                        <p style="margin: 0; font-size: 16px; font-weight: 700; color: #3b82f6;" id="grnDetailNumber">-</p>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">STATUS</label>
+                        <span id="grnDetailStatus" class="badge badge-gray">-</span>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">RECEIVED DATE</label>
+                        <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailReceivedDate">-</p>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">INVOICE NUMBER</label>
+                        <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailInvoiceNumber">-</p>
+                    </div>
+                </div>
+
+                <!-- Supplier Information -->
+                <div style="margin-bottom: 30px;">
+                    <h4 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 700; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+                        <i class="fas fa-building"></i> Supplier Information
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">SUPPLIER NAME</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailSupplierName">-</p>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">CONTACT PERSON</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailSupplierContact">-</p>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">PHONE</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailSupplierPhone">-</p>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">EMAIL</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailSupplierEmail">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Details -->
+                <div style="margin-bottom: 30px;">
+                    <h4 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 700; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+                        <i class="fas fa-file-invoice-dollar"></i> Invoice & Delivery Details
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">INVOICE DATE</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailInvoiceDate">-</p>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">PO NUMBER</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailPONumber">-</p>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">WAREHOUSE LOCATION</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailWarehouse">-</p>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">PAYMENT STATUS</label>
+                            <span id="grnDetailPaymentStatus" class="badge badge-gray">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div style="margin-bottom: 30px;">
+                    <h4 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 700; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+                        <i class="fas fa-boxes"></i> Items Received
+                    </h4>
+                    <div style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <thead style="background: #f8fafc;">
+                                <tr>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">#</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">Product</th>
+                                    <th style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">Batch No.</th>
+                                    <th style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">Qty Received</th>
+                                    <th style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">Unit Cost</th>
+                                    <th style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">Line Total</th>
+                                    <th style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">Expiry Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grnDetailItemsBody">
+                                <tr>
+                                    <td colspan="7" style="padding: 30px; text-align: center; color: #6b7280;">Loading items...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Financial Summary -->
+                <div style="margin-bottom: 30px;">
+                    <h4 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 700; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+                        <i class="fas fa-calculator"></i> Financial Summary
+                    </h4>
+                    <div style="padding: 20px; background: #f8fafc; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                            <span style="color: #6b7280; font-weight: 600;">Subtotal:</span>
+                            <span style="font-weight: 700; color: #1e293b;" id="grnDetailSubtotal">৳0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                            <span style="color: #6b7280; font-weight: 600;">Tax Amount:</span>
+                            <span style="font-weight: 700; color: #1e293b;" id="grnDetailTax">৳0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                            <span style="color: #6b7280; font-weight: 600;">Discount:</span>
+                            <span style="font-weight: 700; color: #1e293b;" id="grnDetailDiscount">৳0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 15px 0; margin-top: 10px; background: #eff6ff; padding: 15px; border-radius: 8px;">
+                            <span style="color: #1e293b; font-weight: 700; font-size: 16px;">Net Amount:</span>
+                            <span style="font-weight: 700; color: #3b82f6; font-size: 18px;" id="grnDetailNetAmount">৳0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div style="margin-bottom: 30px;">
+                    <h4 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 700; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+                        <i class="fas fa-info-circle"></i> Additional Information
+                    </h4>
+                    <div style="padding: 15px; background: #f8fafc; border-radius: 8px;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">NOTES</label>
+                            <p style="margin: 0; font-size: 14px; color: #1e293b; line-height: 1.6;" id="grnDetailNotes">No notes provided</p>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                            <div>
+                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">RECEIVED BY</label>
+                                <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailReceivedBy">-</p>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">VERIFIED BY</label>
+                                <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailVerifiedBy">Not verified</p>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 600;">APPROVED BY</label>
+                                <p style="margin: 0; font-size: 14px; color: #1e293b;" id="grnDetailApprovedBy">Not approved</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <button onclick="closeViewGRNModal()" style="padding: 12px 24px; background: #f1f5f9; color: #64748b; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                    <button onclick="printGRN()" style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-print"></i> Print GRN
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="../js/dashboard-common.js"></script>
     <script src="js/admin_in-charge.js"></script>
 </body>

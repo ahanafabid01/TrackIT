@@ -455,8 +455,9 @@ function getGRNById($conn, $id, $owner_id) {
         SELECT g.*,
                s.company_name as supplier_name,
                s.supplier_code,
-               s.email as supplier_email,
-               s.phone as supplier_phone,
+               s.contact_person,
+               s.email,
+               s.phone,
                u1.name as received_by_name,
                u2.name as verified_by_name,
                u3.name as approved_by_name
@@ -479,7 +480,7 @@ function getGRNById($conn, $id, $owner_id) {
     $stmt = $conn->prepare("
         SELECT gi.*,
                p.name as product_name,
-               p.sku as product_sku,
+               p.sku,
                p.unit
         FROM grn_items gi
         LEFT JOIN products p ON gi.product_id = p.id
