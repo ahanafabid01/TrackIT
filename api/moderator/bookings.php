@@ -319,6 +319,19 @@ function handlePut($conn, $owner_id, $user_id) {
                 $stmt->execute();
             }
             
+            // Auto-update reminders when booking status changes from Pending
+            if ($previousStatus === 'Pending' && $data['status'] !== 'Pending') {
+                $stmt = $conn->prepare("
+                    UPDATE booking_reminders 
+                    SET status = 'Resolved',
+                        sent_at = NOW(),
+                        sent_by = ?
+                    WHERE booking_id = ? AND status = 'Pending'
+                ");
+                $stmt->bind_param("ii", $user_id, $data['id']);
+                $stmt->execute();
+            }
+            
             // Update customer statistics when status changes (especially for Delivered status)
             updateCustomerStats($conn, $currentBooking['customer_id']);
         }
@@ -455,10 +468,10 @@ function getAllBookings($conn, $owner_id) {
         'success' => true,
         'bookings' => $bookings,
         'pagination' => [
-            'page' => $page,
+            'currentPage' => $page,
             'limit' => $limit,
             'total' => $total,
-            'pages' => ceil($total / $limit)
+            'totalPages' => ceil($total / $limit)
         ]
     ]);
 }

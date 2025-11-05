@@ -168,9 +168,6 @@ $low_stock_stats = $stmt->get_result()->fetch_assoc();
                             <div class="stat-icon orange">
                                 <i class="fas fa-clock"></i>
                             </div>
-                            <?php if (($reminder_stats['pending_reminders'] ?? 0) > 0): ?>
-                            <span class="stat-badge"><?php echo $reminder_stats['pending_reminders']; ?></span>
-                            <?php endif; ?>
                         </div>
                         <div class="stat-title">Pending</div>
                         <div class="stat-value"><?php echo $stats['pending'] ?? 0; ?></div>
