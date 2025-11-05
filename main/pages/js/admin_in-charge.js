@@ -225,7 +225,7 @@ function renderGRNTable(grns) {
     if (!tbody) return;
     
     if (!grns || grns.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #6b7280;">No GRNs found. Click "Create GRN" to add your first goods receipt.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: #6b7280;">No GRNs found. Click "Create GRN" to add your first goods receipt.</td></tr>';
         return;
     }
     
@@ -233,6 +233,10 @@ function renderGRNTable(grns) {
         const statusClass = grn.status === 'Approved' ? 'badge-green' :
                            grn.status === 'Verified' ? 'badge-blue' :
                            grn.status === 'Rejected' ? 'badge-red' : 'badge-gray';
+        
+        const paymentStatusClass = grn.payment_status === 'Paid' ? 'badge-green' :
+                                   grn.payment_status === 'Partial' ? 'badge-orange' :
+                                   grn.payment_status === 'Pending' ? 'badge-red' : 'badge-gray';
         
         const receivedDate = grn.received_date ? new Date(grn.received_date).toLocaleDateString('en-GB') : 'N/A';
         const totalAmount = parseFloat(grn.total_amount || 0);
@@ -244,6 +248,13 @@ function renderGRNTable(grns) {
                 <td>${receivedDate}</td>
                 <td><span class="badge badge-blue">${grn.total_items || grn.item_count || 0} items</span></td>
                 <td><strong>৳${totalAmount.toLocaleString('en-BD', {minimumFractionDigits: 2})}</strong></td>
+                <td>
+                    <select class="payment-status-dropdown" data-grn-id="${grn.grn_id || grn.id}" onchange="updatePaymentStatus(${grn.grn_id || grn.id}, this.value)" style="padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; background: white;">
+                        <option value="Pending" ${grn.payment_status === 'Pending' ? 'selected' : ''} style="color: #dc2626;">Pending</option>
+                        <option value="Partial" ${grn.payment_status === 'Partial' ? 'selected' : ''} style="color: #ea580c;">Partial</option>
+                        <option value="Paid" ${grn.payment_status === 'Paid' ? 'selected' : ''} style="color: #059669;">Paid</option>
+                    </select>
+                </td>
                 <td><span class="badge ${statusClass}">${grn.status || 'Draft'}</span></td>
                 <td>
                     <div class="action-buttons">
@@ -438,6 +449,28 @@ async function approveGRN(grnId) {
     } catch (error) {
         console.error('Failed to approve GRN:', error);
         showNotification('Failed to approve GRN: ' + error.message, 'error');
+    }
+}
+
+async function updatePaymentStatus(grnId, newStatus) {
+    try {
+        const response = await fetchAPI('../../api/admin_incharge/grn.php?action=update_payment', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                grn_id: grnId,
+                payment_status: newStatus
+            })
+        });
+        
+        if (response.success) {
+            showNotification(`Payment status updated to ${newStatus}`, 'success');
+            loadGRNs();
+        }
+    } catch (error) {
+        console.error('Failed to update payment status:', error);
+        showNotification('Failed to update payment status: ' + error.message, 'error');
+        // Reload to revert the dropdown
+        loadGRNs();
     }
 }
 

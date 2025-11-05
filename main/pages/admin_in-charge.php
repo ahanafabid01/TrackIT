@@ -262,13 +262,14 @@ $owner_id = getOwnerId();
                                 <th>Received Date</th>
                                 <th>Items</th>
                                 <th>Amount</th>
+                                <th>Payment Status</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="grnTableBody">
                             <tr>
-                                <td colspan="7" style="text-align: center;">Loading GRNs...</td>
+                                <td colspan="8" style="text-align: center;">Loading GRNs...</td>
                             </tr>
                         </tbody>
                     </table>

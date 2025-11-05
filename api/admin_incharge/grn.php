@@ -64,13 +64,13 @@ try {
     }
 } catch (Exception $e) {
     ob_end_clean();
+    http_response_code(400);
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
     ]);
+    exit;
 }
-
-ob_end_flush();
 
 /**
  * GET - Fetch GRN records
@@ -109,6 +109,9 @@ function handlePost($conn, $owner_id, $user_id) {
                 break;
             case 'approve':
                 approveGRN($conn, $data, $owner_id, $user_id);
+                break;
+            case 'update_payment':
+                updatePaymentStatus($conn, $data, $owner_id);
                 break;
             default:
                 throw new Exception('Invalid action');
@@ -561,14 +564,15 @@ function verifyGRN($conn, $data, $owner_id, $user_id) {
     ");
     $stmt->bind_param("iii", $user_id, $grn_id, $owner_id);
     
-    if ($stmt->execute()) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'GRN verified successfully'
-        ]);
-    } else {
+    if (!$stmt->execute()) {
         throw new Exception('Failed to verify GRN');
     }
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'GRN verified successfully'
+    ]);
+    exit;
 }
 
 /**
@@ -618,30 +622,30 @@ function approveGRN($conn, $data, $owner_id, $user_id) {
             // Update product stock
             $stmt = $conn->prepare("
                 UPDATE products 
-                SET stock_quantity = stock_quantity + ?,
-                    last_restocked = NOW()
+                SET stock_quantity = stock_quantity + ?
                 WHERE id = ? AND owner_id = ?
             ");
             $stmt->bind_param("iii", $item['quantity_accepted'], $item['product_id'], $owner_id);
             $stmt->execute();
             
-            // Add to inventory batches
+            // Add to product batches
             $stmt = $conn->prepare("
-                INSERT INTO inventory_batches 
-                (owner_id, product_id, batch_number, quantity, unit_cost, 
-                 manufacturing_date, expiry_date, grn_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO product_batches 
+                (owner_id, product_id, batch_number, grn_id, quantity_received, 
+                 quantity_available, unit_cost, manufacturing_date, expiry_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->bind_param(
-                "iisidssi",
+                "iisiiiiss",
                 $owner_id,
                 $item['product_id'],
                 $item['batch_number'],
+                $grn_id,
+                $item['quantity_accepted'],
                 $item['quantity_accepted'],
                 $item['unit_cost'],
                 $item['manufacturing_date'],
-                $item['expiry_date'],
-                $grn_id
+                $item['expiry_date']
             );
             $stmt->execute();
         }
@@ -663,6 +667,7 @@ function approveGRN($conn, $data, $owner_id, $user_id) {
             'success' => true,
             'message' => 'GRN approved and inventory updated successfully'
         ]);
+        exit;
         
     } catch (Exception $e) {
         $conn->rollback();
@@ -770,4 +775,55 @@ function deleteGRN($conn, $grn_id, $owner_id) {
     } else {
         throw new Exception('Failed to delete GRN');
     }
+}
+
+/**
+ * Update Payment Status
+ */
+function updatePaymentStatus($conn, $data, $owner_id) {
+    if (empty($data['grn_id'])) {
+        throw new Exception('GRN ID is required');
+    }
+    
+    if (empty($data['payment_status'])) {
+        throw new Exception('Payment status is required');
+    }
+    
+    $grn_id = (int)$data['grn_id'];
+    $payment_status = $data['payment_status'];
+    
+    // Validate payment status
+    $valid_statuses = ['Pending', 'Partial', 'Paid'];
+    if (!in_array($payment_status, $valid_statuses)) {
+        throw new Exception('Invalid payment status');
+    }
+    
+    // Check if GRN exists
+    $stmt = $conn->prepare("SELECT id FROM grn WHERE id = ? AND owner_id = ?");
+    $stmt->bind_param("ii", $grn_id, $owner_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    if (!$result) {
+        throw new Exception('GRN not found');
+    }
+    
+    // Update payment status
+    $stmt = $conn->prepare("
+        UPDATE grn 
+        SET payment_status = ?,
+            updated_at = NOW()
+        WHERE id = ? AND owner_id = ?
+    ");
+    $stmt->bind_param("sii", $payment_status, $grn_id, $owner_id);
+    
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to update payment status');
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Payment status updated successfully'
+    ]);
+    exit;
 }

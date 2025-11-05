@@ -109,6 +109,35 @@
     color: #6b7280;
 }
 
+/* Payment Status Dropdown */
+.payment-status-dropdown {
+    padding: 6px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: white;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.payment-status-dropdown:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.payment-status-dropdown:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.payment-status-dropdown option {
+    padding: 8px;
+    font-weight: 600;
+}
+
 /* Button Styles */
 .btn {
     padding: 10px 20px;
