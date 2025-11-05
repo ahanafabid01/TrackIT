@@ -364,7 +364,9 @@ function getStockAlerts($conn, $owner_id) {
         SELECT sa.*,
                p.name as product_name,
                p.sku,
-               p.category
+               p.category,
+               p.stock_quantity as current_stock,
+               p.low_stock_threshold
         FROM stock_alerts sa
         LEFT JOIN products p ON sa.product_id = p.id
         WHERE sa.owner_id = ? AND sa.status = ?
@@ -381,9 +383,42 @@ function getStockAlerts($conn, $owner_id) {
     $stmt->execute();
     $alerts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     
+    // Filter out alerts that are no longer valid (stock has been replenished)
+    $validAlerts = [];
+    foreach ($alerts as $alert) {
+        $isValid = false;
+        
+        // Check if alert is still relevant based on current stock
+        if ($alert['alert_type'] === 'Out of Stock' && $alert['current_stock'] == 0) {
+            $isValid = true;
+        } elseif ($alert['alert_type'] === 'Low Stock' && 
+                  $alert['current_stock'] > 0 && 
+                  $alert['current_stock'] <= $alert['low_stock_threshold']) {
+            $isValid = true;
+        } elseif (in_array($alert['alert_type'], ['Expiring Soon', 'Expired', 'Damaged', 'Overstocked'])) {
+            // These alerts remain valid until manually resolved
+            $isValid = true;
+        }
+        
+        if ($isValid) {
+            $validAlerts[] = $alert;
+        } else {
+            // Auto-resolve the alert since stock has been replenished
+            $resolveStmt = $conn->prepare("
+                UPDATE stock_alerts 
+                SET status = 'Resolved', 
+                    resolved_at = NOW(),
+                    resolution_notes = 'Auto-resolved: Stock replenished'
+                WHERE id = ?
+            ");
+            $resolveStmt->bind_param("i", $alert['id']);
+            $resolveStmt->execute();
+        }
+    }
+    
     echo json_encode([
         'success' => true,
-        'alerts' => $alerts
+        'alerts' => $validAlerts
     ]);
 }
 

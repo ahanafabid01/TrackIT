@@ -187,10 +187,6 @@ $owner_id = getOwnerId();
                             <i class="fas fa-exclamation-triangle"></i>
                             View Alerts
                         </button>
-                        <button class="btn btn-info" onclick="alert('Add New Product feature coming soon!')">
-                            <i class="fas fa-box"></i>
-                            Add New Product
-                        </button>
                         <button class="btn btn-primary" onclick="showAddStockModal()">
                             <i class="fas fa-plus"></i>
                             Add Stock
