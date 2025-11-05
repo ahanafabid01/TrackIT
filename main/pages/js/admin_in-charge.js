@@ -275,9 +275,9 @@ async function verifyGRN(grnId) {
     if (!confirm('Are you sure you want to verify this GRN?')) return;
     
     try {
-        const response = await fetchAPI(`../../api/admin_incharge/grn.php?id=${grnId}`, {
-            method: 'PUT',
-            body: { status: 'Verified' }
+        const response = await fetchAPI('../../api/admin_incharge/grn.php?action=verify', {
+            method: 'POST',
+            body: JSON.stringify({ grn_id: grnId })
         });
         
         if (response.success) {
@@ -286,6 +286,7 @@ async function verifyGRN(grnId) {
         }
     } catch (error) {
         console.error('Failed to verify GRN:', error);
+        showNotification('Failed to verify GRN: ' + error.message, 'error');
     }
 }
 
@@ -293,9 +294,9 @@ async function approveGRN(grnId) {
     if (!confirm('Are you sure you want to approve this GRN? This will update stock levels.')) return;
     
     try {
-        const response = await fetchAPI(`../../api/admin_incharge/grn.php?id=${grnId}`, {
-            method: 'PUT',
-            body: { status: 'Approved' }
+        const response = await fetchAPI('../../api/admin_incharge/grn.php?action=approve', {
+            method: 'POST',
+            body: JSON.stringify({ grn_id: grnId })
         });
         
         if (response.success) {
@@ -306,6 +307,7 @@ async function approveGRN(grnId) {
         }
     } catch (error) {
         console.error('Failed to approve GRN:', error);
+        showNotification('Failed to approve GRN: ' + error.message, 'error');
     }
 }
 

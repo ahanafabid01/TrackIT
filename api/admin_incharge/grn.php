@@ -1,12 +1,28 @@
 <?php
 /**
  * Admin In-charge API - GRN (Goods Received Note) Management
- * Handles GRN creation, verification, approval workflow
+ * Handles GRN CRUD operations, verification, approval
  */
 
+// Enable error reporting for debugging
 error_reporting(E_ALL);
+// Turn on display errors for development debugging (set to 0 in production)
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
+
+// Register shutdown function to catch fatal errors and return JSON (helps with debugging 500s)
+register_shutdown_function(function() {
+    $err = error_get_last();
+    if ($err && ($err['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR))) {
+        http_response_code(500);
+        if (!headers_sent()) header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'error' => 'Fatal error: ' . ($err['message'] ?? 'Unknown')
+        ]);
+        error_log("FATAL ERROR in grn.php: " . print_r($err, true));
+    }
+});
 
 ob_start();
 try {
@@ -14,9 +30,11 @@ try {
     requireRole(['Admin In-charge', 'Owner']);
 } catch (Exception $e) {
     ob_end_clean();
-    http_response_code(500);
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Auth error: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Authentication error: ' . $e->getMessage()
+    ]);
     exit;
 }
 ob_end_clean();
@@ -38,107 +56,161 @@ try {
         case 'PUT':
             handlePut($conn, $owner_id, $user_id);
             break;
+        case 'DELETE':
+            handleDelete($conn, $owner_id);
+            break;
         default:
             throw new Exception('Method not allowed');
     }
 } catch (Exception $e) {
     ob_end_clean();
-    http_response_code(400);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage(),
-        'file' => basename($e->getFile()),
-        'line' => $e->getLine()
+        'error' => $e->getMessage()
     ]);
-    exit;
 }
 
+ob_end_flush();
+
 /**
- * GET - Fetch GRNs
+ * GET - Fetch GRN records
  */
 function handleGet($conn, $owner_id) {
     if (isset($_GET['id'])) {
-        getGrnById($conn, $_GET['id'], $owner_id);
+        getGRNById($conn, $_GET['id'], $owner_id);
     } elseif (isset($_GET['stats'])) {
-        getGrnStats($conn, $owner_id);
+        getGRNStats($conn, $owner_id);
     } else {
-        getAllGrns($conn, $owner_id);
+        getAllGRNs($conn, $owner_id);
     }
 }
 
 /**
- * POST - Create new GRN
+ * POST - Create new GRN or perform actions (verify/approve)
  */
 function handlePost($conn, $owner_id, $user_id) {
+    $rawInput = file_get_contents('php://input');
+    error_log("=== CREATE GRN REQUEST ===");
+    error_log("Raw input: " . $rawInput);
+    
+    $data = json_decode($rawInput, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('Invalid JSON: ' . json_last_error_msg());
+    }
+    
+    error_log("Decoded data: " . print_r($data, true));
+    
+    // Check if this is an action request (verify/approve)
+    if (isset($_GET['action'])) {
+        switch ($_GET['action']) {
+            case 'verify':
+                verifyGRN($conn, $data, $owner_id, $user_id);
+                break;
+            case 'approve':
+                approveGRN($conn, $data, $owner_id, $user_id);
+                break;
+            default:
+                throw new Exception('Invalid action');
+        }
+    } else {
+        // Create new GRN
+        createGRN($conn, $data, $owner_id, $user_id);
+    }
+}
+
+/**
+ * PUT - Update GRN
+ */
+function handlePut($conn, $owner_id, $user_id) {
     $data = json_decode(file_get_contents('php://input'), true);
     
-    // Log received data for debugging
-    error_log("GRN POST Data: " . json_encode($data));
+    if (empty($data['grn_id'])) {
+        throw new Exception('GRN ID is required');
+    }
+    
+    updateGRN($conn, $data, $owner_id, $user_id);
+}
+
+/**
+ * DELETE - Delete GRN (only Draft status)
+ */
+function handleDelete($conn, $owner_id) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (empty($data['grn_id'])) {
+        throw new Exception('GRN ID is required');
+    }
+    
+    deleteGRN($conn, $data['grn_id'], $owner_id);
+}
+
+/**
+ * Create new GRN with items
+ */
+function createGRN($conn, $data, $owner_id, $user_id) {
+    error_log("=== CREATE GRN STARTED ===");
+    error_log("Owner ID: $owner_id, User ID: $user_id");
     
     // Validate required fields
-    if (empty($data['supplier_id']) || empty($data['items'])) {
-        throw new Exception('Supplier and items are required');
+    if (empty($data['supplier_id'])) {
+        throw new Exception('Supplier is required');
     }
     
-    // Validate supplier exists
-    $stmt = $conn->prepare("SELECT id FROM suppliers WHERE id = ? AND owner_id = ?");
-    $stmt->bind_param("ii", $data['supplier_id'], $owner_id);
-    $stmt->execute();
-    if ($stmt->get_result()->num_rows === 0) {
-        throw new Exception('Invalid supplier selected');
+    if (empty($data['invoice_number']) || empty($data['invoice_date']) || empty($data['received_date'])) {
+        throw new Exception('Invoice number, invoice date, and received date are required');
     }
     
+    if (empty($data['items']) || !is_array($data['items']) || count($data['items']) === 0) {
+        throw new Exception('At least one item is required');
+    }
+    
+    // Start transaction
     $conn->begin_transaction();
     
     try {
         // Generate GRN number
-        $year = date('Y');
-        $stmt = $conn->prepare("
-            SELECT COUNT(*) as count 
-            FROM grn 
-            WHERE owner_id = ? AND YEAR(created_at) = ?
-        ");
-        $stmt->bind_param("ii", $owner_id, $year);
-        $stmt->execute();
-        $count = $stmt->get_result()->fetch_assoc()['count'];
-        $grn_number = 'GRN-' . $year . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        $grn_number = generateGRNNumber($conn, $owner_id);
+        error_log("Generated GRN number: $grn_number");
         
-        // Calculate totals
-        $total_items = count($data['items']);
-        $total_quantity = 0;
-        $total_amount = 0;
-        
-        foreach ($data['items'] as $item) {
-            $total_quantity += $item['quantity_accepted'] ?? $item['quantity_received'];
-            $total_amount += $item['total_cost'];
-        }
-        
-        $tax_amount = $data['tax_amount'] ?? 0;
-        $discount_amount = $data['discount_amount'] ?? 0;
-        $net_amount = $total_amount + $tax_amount - $discount_amount;
+        // Prepare GRN data with safe defaults
+        $supplier_id = (int)$data['supplier_id'];
+        $invoice_number = $data['invoice_number'];
+        $invoice_date = $data['invoice_date'];
+        $received_date = $data['received_date'];
+        $po_number = $data['purchase_order_number'] ?? null;
+        $total_items = (int)$data['total_items'];
+        $total_quantity = (int)$data['total_quantity'];
+        $total_amount = (float)$data['total_amount'];
+        $tax_amount = (float)($data['tax_amount'] ?? 0);
+        $discount_amount = (float)($data['discount_amount'] ?? 0);
+        $net_amount = (float)$data['net_amount'];
+        $payment_status = $data['payment_status'] ?? 'Pending';
+        $warehouse_location = $data['warehouse_location'] ?? null;
+        $notes = $data['notes'] ?? null;
         
         // Insert GRN
         $stmt = $conn->prepare("
             INSERT INTO grn 
             (owner_id, grn_number, supplier_id, purchase_order_number, invoice_number, 
              invoice_date, received_date, total_items, total_quantity, total_amount, 
-             tax_amount, discount_amount, net_amount, payment_status, payment_due_date,
-             status, warehouse_location, received_by, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tax_amount, discount_amount, net_amount, payment_status, warehouse_location, 
+             status, received_by, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?)
         ");
         
-        $received_date = $data['received_date'] ?? date('Y-m-d');
-        $status = $data['status'] ?? 'Draft';
-        $payment_status = $data['payment_status'] ?? 'Pending';
+        if (!$stmt) {
+            throw new Exception('Failed to prepare GRN statement: ' . $conn->error);
+        }
         
         $stmt->bind_param(
-            "issssssiiidddsssis",
+            "isissssiiddddssis",
             $owner_id,
             $grn_number,
-            $data['supplier_id'],
-            $data['purchase_order_number'] ?? null,
-            $data['invoice_number'] ?? null,
-            $data['invoice_date'] ?? null,
+            $supplier_id,
+            $po_number,
+            $invoice_number,
+            $invoice_date,
             $received_date,
             $total_items,
             $total_quantity,
@@ -147,107 +219,80 @@ function handlePost($conn, $owner_id, $user_id) {
             $discount_amount,
             $net_amount,
             $payment_status,
-            $data['payment_due_date'] ?? null,
-            $status,
-            $data['warehouse_location'] ?? null,
+            $warehouse_location,
             $user_id,
-            $data['notes'] ?? null
+            $notes
         );
         
         if (!$stmt->execute()) {
-            throw new Exception('Failed to create GRN');
+            throw new Exception('Failed to create GRN: ' . $stmt->error);
         }
         
         $grn_id = $conn->insert_id;
+        error_log("✅ GRN created with ID: $grn_id");
         
-        // Insert GRN items and create batches
-        foreach ($data['items'] as $item) {
-            $quantity_accepted = $item['quantity_accepted'] ?? $item['quantity_received'];
-            $quantity_rejected = $item['quantity_rejected'] ?? 0;
-            $condition_status = $item['condition_status'] ?? 'New';
-            
-            // Auto-generate batch number if not provided
-            $batch_number = $item['batch_number'] ?? null;
-            if (empty($batch_number) && $quantity_accepted > 0) {
-                $batch_number = generateBatchNumber($conn, $item['product_id'], $grn_id);
-                error_log("Auto-generated batch number: $batch_number for product_id: {$item['product_id']}");
-            }
-            
-            // Insert GRN item
-            $stmt = $conn->prepare("
-                INSERT INTO grn_items 
-                (grn_id, product_id, batch_number, quantity_ordered, quantity_received, 
-                 quantity_accepted, quantity_rejected, unit_cost, total_cost, 
-                 manufacturing_date, expiry_date, condition_status, rejection_reason, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            
-            $stmt->bind_param(
-                "iisiiiiddssss",
-                $grn_id,
-                $item['product_id'],
-                $batch_number,
-                $item['quantity_ordered'] ?? null,
-                $item['quantity_received'],
-                $quantity_accepted,
-                $quantity_rejected,
-                $item['unit_cost'],
-                $item['total_cost'],
-                $item['manufacturing_date'] ?? null,
-                $item['expiry_date'] ?? null,
-                $condition_status,
-                $item['rejection_reason'] ?? null,
-                $item['notes'] ?? null
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception('Failed to insert GRN item: ' . $stmt->error);
-            }
-            
-            // Create or update product batch
-            if ($quantity_accepted > 0) {
-                createOrUpdateBatch(
-                    $conn,
-                    $owner_id,
-                    $item['product_id'],
-                    $batch_number,
-                    $grn_id,
-                    $quantity_accepted,
-                    $item['unit_cost'],
-                    $item['manufacturing_date'] ?? null,
-                    $item['expiry_date'] ?? null,
-                    $item['warehouse_location'] ?? $data['warehouse_location'] ?? null
-                );
-                
-                // Update product stock
-                $stmt = $conn->prepare("
-                    UPDATE products 
-                    SET stock_quantity = stock_quantity + ? 
-                    WHERE id = ? AND owner_id = ?
-                ");
-                $stmt->bind_param("iii", $quantity_accepted, $item['product_id'], $owner_id);
-                if (!$stmt->execute()) {
-                    throw new Exception('Failed to update product stock: ' . $stmt->error);
-                }
-                
-                // Log inventory audit
-                logInventoryAudit(
-                    $conn,
-                    $owner_id,
-                    $item['product_id'],
-                    $batch_number,
-                    'Stock In',
-                    'GRN',
-                    $grn_id,
-                    $quantity_accepted,
-                    $item['unit_cost'],
-                    "GRN $grn_number processed",
-                    $user_id
-                );
-            }
+        // Insert GRN items
+        $stmt_item = $conn->prepare("
+            INSERT INTO grn_items 
+            (owner_id, grn_id, product_id, batch_number, quantity_received, 
+             quantity_accepted, quantity_rejected, unit_cost, total_cost, 
+             manufacturing_date, expiry_date, condition_status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
+        if (!$stmt_item) {
+            throw new Exception('Failed to prepare GRN items statement: ' . $conn->error);
         }
         
+        foreach ($data['items'] as $index => $item) {
+            error_log("Processing item #" . ($index + 1) . ": " . print_r($item, true));
+            
+            // Generate batch number if not provided
+            $batch_number = $item['batch_number'] ?? null;
+            if (empty($batch_number)) {
+                $batch_number = generateBatchNumber($conn, $owner_id, $item['product_id']);
+                error_log("Generated batch number: $batch_number");
+            }
+            
+            $product_id = (int)$item['product_id'];
+            $qty_received = (int)$item['quantity_received'];
+            $qty_accepted = (int)$item['quantity_accepted'];
+            $qty_rejected = (int)($item['quantity_rejected'] ?? 0);
+            $unit_cost = (float)$item['unit_cost'];
+            $total_cost = (float)$item['total_cost'];
+            $mfg_date = $item['manufacturing_date'] ?? null;
+            $expiry_date = $item['expiry_date'] ?? null;
+            $condition = $item['condition_status'] ?? 'New';
+            $item_notes = $item['notes'] ?? null;
+            
+            $stmt_item->bind_param(
+                "iiisiiiddssss",
+                $owner_id,
+                $grn_id,
+                $product_id,
+                $batch_number,
+                $qty_received,
+                $qty_accepted,
+                $qty_rejected,
+                $unit_cost,
+                $total_cost,
+                $mfg_date,
+                $expiry_date,
+                $condition,
+                $item_notes
+            );
+            
+            if (!$stmt_item->execute()) {
+                throw new Exception("Failed to add item #" . ($index + 1) . ": " . $stmt_item->error);
+            }
+            
+            error_log("✅ Item #" . ($index + 1) . " added successfully");
+        }
+        
+        // Commit transaction
         $conn->commit();
+        
+        error_log("=== GRN CREATION COMPLETED SUCCESSFULLY ===");
         
         echo json_encode([
             'success' => true,
@@ -258,83 +303,69 @@ function handlePost($conn, $owner_id, $user_id) {
         
     } catch (Exception $e) {
         $conn->rollback();
+        error_log("❌ GRN creation failed: " . $e->getMessage());
         throw $e;
     }
 }
 
 /**
- * PUT - Update GRN status (verify/approve/reject)
+ * Generate unique GRN number
  */
-function handlePut($conn, $owner_id, $user_id) {
-    $data = json_decode(file_get_contents('php://input'), true);
+function generateGRNNumber($conn, $owner_id) {
+    $year = date('Y');
     
-    if (empty($data['grn_id'])) {
-        throw new Exception('GRN ID is required');
-    }
+    // Get the count of GRNs for this owner in current year
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as count 
+        FROM grn 
+        WHERE owner_id = ? AND YEAR(created_at) = ?
+    ");
+    $stmt->bind_param("ii", $owner_id, $year);
+    $stmt->execute();
+    $count = $stmt->get_result()->fetch_assoc()['count'];
     
-    $updates = [];
-    $values = [];
-    $types = "";
-    
-    // Update status
-    if (isset($data['status'])) {
-        $updates[] = "status = ?";
-        $values[] = $data['status'];
-        $types .= "s";
-        
-        // Track who verified/approved
-        if ($data['status'] === 'Verified') {
-            $updates[] = "verified_by = ?";
-            $values[] = $user_id;
-            $types .= "i";
-        } elseif ($data['status'] === 'Approved') {
-            $updates[] = "approved_by = ?";
-            $values[] = $user_id;
-            $types .= "i";
-        } elseif ($data['status'] === 'Rejected' && !empty($data['rejection_reason'])) {
-            $updates[] = "rejection_reason = ?";
-            $values[] = $data['rejection_reason'];
-            $types .= "s";
-        }
-    }
-    
-    // Update payment status
-    if (isset($data['payment_status'])) {
-        $updates[] = "payment_status = ?";
-        $values[] = $data['payment_status'];
-        $types .= "s";
-    }
-    
-    if (empty($updates)) {
-        throw new Exception('No fields to update');
-    }
-    
-    $sql = "UPDATE grn SET " . implode(", ", $updates) . " WHERE id = ? AND owner_id = ?";
-    $types .= "ii";
-    $values[] = $data['grn_id'];
-    $values[] = $owner_id;
-    
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param($types, ...$values);
-    
-    if ($stmt->execute()) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'GRN updated successfully'
-        ]);
-    } else {
-        throw new Exception('Failed to update GRN');
-    }
+    $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+    return "GRN-{$year}-{$sequence}";
 }
 
 /**
- * Get all GRNs with pagination
+ * Generate batch number for product
  */
-function getAllGrns($conn, $owner_id) {
+function generateBatchNumber($conn, $owner_id, $product_id) {
+    // Get product details
+    $stmt = $conn->prepare("SELECT name FROM products WHERE id = ? AND owner_id = ?");
+    $stmt->bind_param("ii", $product_id, $owner_id);
+    $stmt->execute();
+    $product = $stmt->get_result()->fetch_assoc();
+    
+    $year = date('y'); // Last 2 digits of year
+    $timestamp = substr(time(), -6); // Last 6 digits of timestamp
+    
+    // Get first 2-3 letters of product name
+    $productCode = 'PROD';
+    if ($product && !empty($product['name'])) {
+        $words = explode(' ', strtoupper($product['name']));
+        if (count($words) >= 2) {
+            $productCode = substr($words[0], 0, 1) . substr($words[1], 0, 1);
+        } else {
+            $productCode = substr($words[0], 0, 3);
+        }
+    }
+    
+    return "B{$year}-{$productCode}-{$timestamp}";
+}
+
+/**
+ * Get all GRNs with pagination and filters
+ */
+function getAllGRNs($conn, $owner_id) {
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
     $offset = ($page - 1) * $limit;
     $status = isset($_GET['status']) ? $_GET['status'] : null;
+    $supplier_id = isset($_GET['supplier_id']) ? (int)$_GET['supplier_id'] : null;
+    $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : null;
+    $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : null;
     
     $whereClause = "WHERE g.owner_id = ?";
     $params = [$owner_id];
@@ -343,6 +374,24 @@ function getAllGrns($conn, $owner_id) {
     if ($status) {
         $whereClause .= " AND g.status = ?";
         $params[] = $status;
+        $types .= "s";
+    }
+    
+    if ($supplier_id) {
+        $whereClause .= " AND g.supplier_id = ?";
+        $params[] = $supplier_id;
+        $types .= "i";
+    }
+    
+    if ($date_from) {
+        $whereClause .= " AND g.received_date >= ?";
+        $params[] = $date_from;
+        $types .= "s";
+    }
+    
+    if ($date_to) {
+        $whereClause .= " AND g.received_date <= ?";
+        $params[] = $date_to;
         $types .= "s";
     }
     
@@ -358,10 +407,14 @@ function getAllGrns($conn, $owner_id) {
         SELECT g.*,
                s.company_name as supplier_name,
                s.supplier_code,
-               u.name as received_by_name
+               u1.name as received_by_name,
+               u2.name as verified_by_name,
+               u3.name as approved_by_name
         FROM grn g
         LEFT JOIN suppliers s ON g.supplier_id = s.id
-        LEFT JOIN users u ON g.received_by = u.id
+        LEFT JOIN users u1 ON g.received_by = u1.id
+        LEFT JOIN users u2 ON g.verified_by = u2.id
+        LEFT JOIN users u3 ON g.approved_by = u3.id
         $whereClause
         ORDER BY g.created_at DESC
         LIMIT ? OFFSET ?
@@ -396,11 +449,13 @@ function getAllGrns($conn, $owner_id) {
 /**
  * Get GRN by ID with items
  */
-function getGrnById($conn, $id, $owner_id) {
+function getGRNById($conn, $id, $owner_id) {
+    // Get GRN details
     $stmt = $conn->prepare("
         SELECT g.*,
                s.company_name as supplier_name,
-               s.contact_person,
+               s.supplier_code,
+               s.email as supplier_email,
                s.phone as supplier_phone,
                u1.name as received_by_name,
                u2.name as verified_by_name,
@@ -424,11 +479,12 @@ function getGrnById($conn, $id, $owner_id) {
     $stmt = $conn->prepare("
         SELECT gi.*,
                p.name as product_name,
-               p.sku,
-               p.category
+               p.sku as product_sku,
+               p.unit
         FROM grn_items gi
         LEFT JOIN products p ON gi.product_id = p.id
         WHERE gi.grn_id = ?
+        ORDER BY gi.id
     ");
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -443,7 +499,7 @@ function getGrnById($conn, $id, $owner_id) {
 /**
  * Get GRN statistics
  */
-function getGrnStats($conn, $owner_id) {
+function getGRNStats($conn, $owner_id) {
     $stmt = $conn->prepare("
         SELECT 
             COUNT(*) as total_grns,
@@ -451,7 +507,7 @@ function getGrnStats($conn, $owner_id) {
             SUM(CASE WHEN status = 'Verified' THEN 1 ELSE 0 END) as verified_grns,
             SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as approved_grns,
             SUM(CASE WHEN MONTH(received_date) = MONTH(CURRENT_DATE()) 
-                AND YEAR(received_date) = YEAR(CURRENT_DATE()) THEN 1 ELSE 0 END) as this_month_grns,
+                AND YEAR(received_date) = YEAR(CURRENT_DATE()) THEN 1 ELSE 0 END) as grns_this_month,
             SUM(net_amount) as total_value,
             SUM(CASE WHEN payment_status = 'Pending' THEN net_amount ELSE 0 END) as pending_payments
         FROM grn
@@ -468,108 +524,249 @@ function getGrnStats($conn, $owner_id) {
 }
 
 /**
- * Helper: Generate batch number
+ * Verify GRN
  */
-function generateBatchNumber($conn, $product_id, $grn_id = null) {
-    $year = date('y');
-    $month = date('m');
-    $timestamp = time();
-    
-    // Format: B{year}{month}-PROD{product_id}-{grn_id}-{timestamp_last4}
-    $batch = "B$year$month-P" . str_pad($product_id, 4, '0', STR_PAD_LEFT);
-    
-    if ($grn_id) {
-        $batch .= "-G" . str_pad($grn_id, 3, '0', STR_PAD_LEFT);
+function verifyGRN($conn, $data, $owner_id, $user_id) {
+    if (empty($data['grn_id'])) {
+        throw new Exception('GRN ID is required');
     }
     
-    $batch .= "-" . substr($timestamp, -4);
+    $grn_id = (int)$data['grn_id'];
     
-    // Ensure uniqueness
-    $stmt = $conn->prepare("SELECT id FROM product_batches WHERE batch_number = ?");
-    $stmt->bind_param("s", $batch);
-    $stmt->execute();
-    
-    if ($stmt->get_result()->num_rows > 0) {
-        // If duplicate, add random suffix
-        $batch .= rand(10, 99);
-    }
-    
-    return $batch;
-}
-
-/**
- * Helper: Create or update product batch
- */
-function createOrUpdateBatch($conn, $owner_id, $product_id, $batch_number, $grn_id, $quantity, $unit_cost, $mfg_date, $exp_date, $location) {
-    // Check if batch exists
-    $stmt = $conn->prepare("SELECT id, quantity_available FROM product_batches WHERE batch_number = ? AND owner_id = ?");
-    $stmt->bind_param("si", $batch_number, $owner_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        // Update existing batch
-        $batch = $result->fetch_assoc();
-        $stmt = $conn->prepare("
-            UPDATE product_batches 
-            SET quantity_received = quantity_received + ?,
-                quantity_available = quantity_available + ?
-            WHERE id = ?
-        ");
-        $stmt->bind_param("iii", $quantity, $quantity, $batch['id']);
-        $stmt->execute();
-    } else {
-        // Create new batch
-        $stmt = $conn->prepare("
-            INSERT INTO product_batches 
-            (owner_id, product_id, batch_number, grn_id, quantity_received, quantity_available, 
-             unit_cost, manufacturing_date, expiry_date, warehouse_location, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
-        ");
-        $stmt->bind_param(
-            "iisiiidsss",
-            $owner_id,
-            $product_id,
-            $batch_number,
-            $grn_id,
-            $quantity,
-            $quantity,
-            $unit_cost,
-            $mfg_date,
-            $exp_date,
-            $location
-        );
-        $stmt->execute();
-    }
-}
-
-/**
- * Helper: Log inventory audit
- */
-function logInventoryAudit($conn, $owner_id, $product_id, $batch_number, $action_type, $reference_type, $reference_id, $quantity_change, $cost, $reason, $user_id) {
+    // Check if GRN exists and is in Draft status
     $stmt = $conn->prepare("
-        INSERT INTO inventory_audit_logs 
-        (owner_id, product_id, batch_number, action_type, reference_type, reference_id, 
-         quantity_change, cost_per_unit, reason, performed_by, ip_address)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        SELECT status FROM grn 
+        WHERE id = ? AND owner_id = ?
     ");
-    
-    $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
-    
-    $stmt->bind_param(
-        "issssiidsss",
-        $owner_id,
-        $product_id,
-        $batch_number,
-        $action_type,
-        $reference_type,
-        $reference_id,
-        $quantity_change,
-        $cost,
-        $reason,
-        $user_id,
-        $ip_address
-    );
-    
+    $stmt->bind_param("ii", $grn_id, $owner_id);
     $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    if (!$result) {
+        throw new Exception('GRN not found');
+    }
+    
+    if ($result['status'] !== 'Draft') {
+        throw new Exception('Only Draft GRNs can be verified');
+    }
+    
+    // Update GRN status
+    $stmt = $conn->prepare("
+        UPDATE grn 
+        SET status = 'Verified', 
+            verified_by = ?,
+            updated_at = NOW()
+        WHERE id = ? AND owner_id = ?
+    ");
+    $stmt->bind_param("iii", $user_id, $grn_id, $owner_id);
+    
+    if ($stmt->execute()) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'GRN verified successfully'
+        ]);
+    } else {
+        throw new Exception('Failed to verify GRN');
+    }
+}
+
+/**
+ * Approve GRN and update inventory
+ */
+function approveGRN($conn, $data, $owner_id, $user_id) {
+    if (empty($data['grn_id'])) {
+        throw new Exception('GRN ID is required');
+    }
+    
+    $grn_id = (int)$data['grn_id'];
+    
+    // Start transaction
+    $conn->begin_transaction();
+    
+    try {
+        // Check if GRN exists and is in Verified status
+        $stmt = $conn->prepare("
+            SELECT status FROM grn 
+            WHERE id = ? AND owner_id = ?
+        ");
+        $stmt->bind_param("ii", $grn_id, $owner_id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        if (!$result) {
+            throw new Exception('GRN not found');
+        }
+        
+        if ($result['status'] !== 'Verified') {
+            throw new Exception('Only Verified GRNs can be approved');
+        }
+        
+        // Get GRN items
+        $stmt = $conn->prepare("
+            SELECT product_id, quantity_accepted, unit_cost, 
+                   batch_number, manufacturing_date, expiry_date
+            FROM grn_items
+            WHERE grn_id = ?
+        ");
+        $stmt->bind_param("i", $grn_id);
+        $stmt->execute();
+        $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        
+        // Update inventory for each item
+        foreach ($items as $item) {
+            // Update product stock
+            $stmt = $conn->prepare("
+                UPDATE products 
+                SET stock_quantity = stock_quantity + ?,
+                    last_restocked = NOW()
+                WHERE id = ? AND owner_id = ?
+            ");
+            $stmt->bind_param("iii", $item['quantity_accepted'], $item['product_id'], $owner_id);
+            $stmt->execute();
+            
+            // Add to inventory batches
+            $stmt = $conn->prepare("
+                INSERT INTO inventory_batches 
+                (owner_id, product_id, batch_number, quantity, unit_cost, 
+                 manufacturing_date, expiry_date, grn_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->bind_param(
+                "iisidssi",
+                $owner_id,
+                $item['product_id'],
+                $item['batch_number'],
+                $item['quantity_accepted'],
+                $item['unit_cost'],
+                $item['manufacturing_date'],
+                $item['expiry_date'],
+                $grn_id
+            );
+            $stmt->execute();
+        }
+        
+        // Update GRN status
+        $stmt = $conn->prepare("
+            UPDATE grn 
+            SET status = 'Approved', 
+                approved_by = ?,
+                updated_at = NOW()
+            WHERE id = ? AND owner_id = ?
+        ");
+        $stmt->bind_param("iii", $user_id, $grn_id, $owner_id);
+        $stmt->execute();
+        
+        $conn->commit();
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'GRN approved and inventory updated successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        throw $e;
+    }
+}
+
+/**
+ * Update GRN (only Draft status)
+ */
+function updateGRN($conn, $data, $owner_id, $user_id) {
+    $grn_id = (int)$data['grn_id'];
+    
+    // Check if GRN is in Draft status
+    $stmt = $conn->prepare("
+        SELECT status FROM grn 
+        WHERE id = ? AND owner_id = ?
+    ");
+    $stmt->bind_param("ii", $grn_id, $owner_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    if (!$result) {
+        throw new Exception('GRN not found');
+    }
+    
+    if ($result['status'] !== 'Draft') {
+        throw new Exception('Only Draft GRNs can be updated');
+    }
+    
+    // Update allowed fields
+    $updates = [];
+    $values = [];
+    $types = "";
+    
+    $allowedFields = [
+        'invoice_number' => 's',
+        'invoice_date' => 's',
+        'received_date' => 's',
+        'purchase_order_number' => 's',
+        'warehouse_location' => 's',
+        'notes' => 's'
+    ];
+    
+    foreach ($allowedFields as $field => $type) {
+        if (isset($data[$field])) {
+            $updates[] = "$field = ?";
+            $values[] = $data[$field];
+            $types .= $type;
+        }
+    }
+    
+    if (empty($updates)) {
+        throw new Exception('No fields to update');
+    }
+    
+    $sql = "UPDATE grn SET " . implode(", ", $updates) . " WHERE id = ? AND owner_id = ?";
+    $types .= "ii";
+    $values[] = $grn_id;
+    $values[] = $owner_id;
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$values);
+    
+    if ($stmt->execute()) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'GRN updated successfully'
+        ]);
+    } else {
+        throw new Exception('Failed to update GRN');
+    }
+}
+
+/**
+ * Delete GRN (only Draft status)
+ */
+function deleteGRN($conn, $grn_id, $owner_id) {
+    // Check if GRN is in Draft status
+    $stmt = $conn->prepare("
+        SELECT status FROM grn 
+        WHERE id = ? AND owner_id = ?
+    ");
+    $stmt->bind_param("ii", $grn_id, $owner_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    if (!$result) {
+        throw new Exception('GRN not found');
+    }
+    
+    if ($result['status'] !== 'Draft') {
+        throw new Exception('Only Draft GRNs can be deleted');
+    }
+    
+    // Delete GRN (items will be deleted automatically due to CASCADE)
+    $stmt = $conn->prepare("DELETE FROM grn WHERE id = ? AND owner_id = ?");
+    $stmt->bind_param("ii", $grn_id, $owner_id);
+    
+    if ($stmt->execute()) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'GRN deleted successfully'
+        ]);
+    } else {
+        throw new Exception('Failed to delete GRN');
+    }
 }
