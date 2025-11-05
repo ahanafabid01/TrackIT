@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 05, 2025 at 07:45 PM
+-- Generation Time: Nov 05, 2025 at 10:16 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -368,6 +368,7 @@ INSERT INTO `grn` (`id`, `owner_id`, `grn_number`, `supplier_id`, `purchase_orde
 
 CREATE TABLE `grn_items` (
   `id` int(11) NOT NULL,
+  `owner_id` int(11) NOT NULL,
   `grn_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `batch_number` varchar(50) DEFAULT NULL,
@@ -389,10 +390,10 @@ CREATE TABLE `grn_items` (
 -- Dumping data for table `grn_items`
 --
 
-INSERT INTO `grn_items` (`id`, `grn_id`, `product_id`, `batch_number`, `quantity_ordered`, `quantity_received`, `quantity_accepted`, `quantity_rejected`, `unit_cost`, `total_cost`, `manufacturing_date`, `expiry_date`, `condition_status`, `rejection_reason`, `notes`, `created_at`) VALUES
-(1, 1, 1, 'B25-LS-001', NULL, 50, 50, 0, 1800.00, 90000.00, '2025-10-15', NULL, 'New', NULL, NULL, '2025-11-05 18:33:17'),
-(2, 1, 2, 'B25-WM-001', NULL, 100, 98, 0, 800.00, 78400.00, '2025-10-20', NULL, 'New', NULL, NULL, '2025-11-05 18:33:17'),
-(3, 2, 3, 'B25-UC-001', NULL, 80, 80, 0, 2400.00, 192000.00, '2025-10-25', NULL, 'New', NULL, NULL, '2025-11-05 18:33:17');
+INSERT INTO `grn_items` (`id`, `owner_id`, `grn_id`, `product_id`, `batch_number`, `quantity_ordered`, `quantity_received`, `quantity_accepted`, `quantity_rejected`, `unit_cost`, `total_cost`, `manufacturing_date`, `expiry_date`, `condition_status`, `rejection_reason`, `notes`, `created_at`) VALUES
+(1, 0, 1, 1, 'B25-LS-001', NULL, 50, 50, 0, 1800.00, 90000.00, '2025-10-15', NULL, 'New', NULL, NULL, '2025-11-05 18:33:17'),
+(2, 0, 1, 2, 'B25-WM-001', NULL, 100, 98, 0, 800.00, 78400.00, '2025-10-20', NULL, 'New', NULL, NULL, '2025-11-05 18:33:17'),
+(3, 0, 2, 3, 'B25-UC-001', NULL, 80, 80, 0, 2400.00, 192000.00, '2025-10-25', NULL, 'New', NULL, NULL, '2025-11-05 18:33:17');
 
 -- --------------------------------------------------------
 
@@ -428,7 +429,10 @@ CREATE TABLE `inventory_audit_logs` (
 INSERT INTO `inventory_audit_logs` (`id`, `owner_id`, `product_id`, `batch_number`, `action_type`, `reference_type`, `reference_id`, `quantity_before`, `quantity_change`, `quantity_after`, `cost_per_unit`, `location_from`, `location_to`, `reason`, `performed_by`, `ip_address`, `user_agent`, `created_at`) VALUES
 (1, 1, 1, 'B25-LS-001', 'Stock In', 'GRN', NULL, 0, 50, 50, 1800.00, NULL, NULL, 'GRN-2025-001 processed', 1, NULL, NULL, '2025-11-05 18:33:18'),
 (2, 1, 1, 'B25-LS-001', 'Stock Out', 'Booking', NULL, 50, -1, 49, 1800.00, NULL, NULL, 'Sold via booking BK-001', 11, NULL, NULL, '2025-11-05 18:33:18'),
-(3, 1, 2, 'B25-WM-001', 'Stock In', 'GRN', NULL, 0, 98, 98, 800.00, NULL, NULL, 'GRN-2025-001 processed', 1, NULL, NULL, '2025-11-05 18:33:18');
+(3, 1, 2, 'B25-WM-001', 'Stock In', 'GRN', NULL, 0, 98, 98, 800.00, NULL, NULL, 'GRN-2025-001 processed', 1, NULL, NULL, '2025-11-05 18:33:18'),
+(4, 1, 4, 'B25-PROD-745402', 'Stock In', 'Manual', NULL, 0, 25, 25, 1500.00, NULL, NULL, 'New Purchase', 12, '::1', NULL, '2025-11-05 19:43:38'),
+(5, 1, 2, 'B25-WMP-887391', 'Stock In', 'Manual', NULL, 8, 50, 58, 1500.00, NULL, NULL, 'New purchase', 12, '::1', NULL, '2025-11-05 19:44:48'),
+(6, 1, 2, 'B25-WMP-904562', 'Stock In', 'Manual', NULL, 58, 25, 83, 1500.00, NULL, NULL, 'new purchase', 12, '::1', NULL, '2025-11-05 19:45:14');
 
 -- --------------------------------------------------------
 
@@ -518,11 +522,12 @@ CREATE TABLE `products` (
 
 INSERT INTO `products` (`id`, `owner_id`, `name`, `sku`, `description`, `category`, `price`, `cost`, `stock_quantity`, `low_stock_threshold`, `unit`, `status`, `image_url`, `created_by`, `created_at`, `updated_at`) VALUES
 (1, 1, 'Premium Laptop Stand', 'SKU-001', 'Ergonomic aluminum laptop stand with adjustable height', 'Office Accessories', 2500.00, 1800.00, 49, 10, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 23:05:53'),
-(2, 1, 'Wireless Mouse Pro', 'SKU-002', 'Bluetooth wireless mouse with ergonomic design', 'Computer Peripherals', 1200.00, 800.00, 8, 15, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
+(2, 1, 'Wireless Mouse Pro', 'SKU-002', 'Bluetooth wireless mouse with ergonomic design', 'Computer Peripherals', 1200.00, 800.00, 83, 15, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-05 19:45:14'),
 (3, 1, 'USB-C Hub 7-in-1', 'SKU-003', 'Multi-port USB-C hub with HDMI, USB 3.0, SD card reader', 'Computer Peripherals', 3500.00, 2400.00, 120, 20, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
-(4, 1, 'Mechanical Keyboard RGB', 'SKU-004', 'Gaming mechanical keyboard with RGB backlighting', 'Computer Peripherals', 4500.00, 3200.00, 0, 10, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
+(4, 1, 'Mechanical Keyboard RGB', 'SKU-004', 'Gaming mechanical keyboard with RGB backlighting', 'Computer Peripherals', 4500.00, 3200.00, 25, 10, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-05 19:43:38'),
 (5, 1, 'Webcam 1080p HD', 'SKU-005', 'Full HD webcam with built-in microphone', 'Computer Peripherals', 3200.00, 2100.00, 32, 15, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 16:55:26'),
-(6, 1, 'Monitor Screen Protector', 'SKU-006', 'Anti-glare screen protector for 24-inch monitors', 'Office Accessories', 800.00, 450.00, 78, 25, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 21:35:13');
+(6, 1, 'Monitor Screen Protector', 'SKU-006', 'Anti-glare screen protector for 24-inch monitors', 'Office Accessories', 800.00, 450.00, 78, 25, 'pieces', 'Active', NULL, 1, '2025-11-03 16:55:26', '2025-11-03 21:35:13'),
+(7, 1, 'Controller', 'SKU-1762374098999', '', 'Electronics', 1500.00, 1200.00, 0, 0, 'pcs', 'Active', NULL, 12, '2025-11-05 20:21:52', '2025-11-05 20:21:52');
 
 -- --------------------------------------------------------
 
@@ -582,7 +587,10 @@ CREATE TABLE `product_batches` (
 INSERT INTO `product_batches` (`id`, `owner_id`, `product_id`, `batch_number`, `grn_id`, `quantity_received`, `quantity_available`, `quantity_sold`, `quantity_damaged`, `quantity_returned`, `unit_cost`, `manufacturing_date`, `expiry_date`, `warehouse_location`, `status`, `notes`, `created_at`, `updated_at`) VALUES
 (1, 1, 1, 'B25-LS-001', 1, 50, 49, 1, 0, 0, 1800.00, '2025-10-15', NULL, 'A-12-03', 'Active', NULL, '2025-11-05 18:33:17', '2025-11-05 18:33:17'),
 (2, 1, 2, 'B25-WM-001', 1, 98, 90, 8, 0, 0, 800.00, '2025-10-20', NULL, 'B-05-11', 'Low Stock', NULL, '2025-11-05 18:33:17', '2025-11-05 18:33:17'),
-(3, 1, 3, 'B25-UC-001', 2, 80, 77, 3, 0, 0, 2400.00, '2025-10-25', NULL, 'A-18-07', 'Active', NULL, '2025-11-05 18:33:17', '2025-11-05 18:33:17');
+(3, 1, 3, 'B25-UC-001', 2, 80, 77, 3, 0, 0, 2400.00, '2025-10-25', NULL, 'A-18-07', 'Active', NULL, '2025-11-05 18:33:17', '2025-11-05 18:33:17'),
+(4, 1, 4, 'B25-PROD-745402', NULL, 25, 25, 0, 0, 0, 1500.00, NULL, NULL, NULL, 'Active', NULL, '2025-11-05 19:43:38', '2025-11-05 19:43:38'),
+(5, 1, 2, 'B25-WMP-887391', NULL, 50, 50, 0, 0, 0, 1500.00, NULL, NULL, NULL, 'Active', NULL, '2025-11-05 19:44:48', '2025-11-05 19:44:48'),
+(6, 1, 2, 'B25-WMP-904562', NULL, 25, 25, 0, 0, 0, 1500.00, NULL, NULL, NULL, 'Active', NULL, '2025-11-05 19:45:14', '2025-11-05 19:45:14');
 
 -- --------------------------------------------------------
 
@@ -724,7 +732,12 @@ CREATE TABLE `suppliers` (
 INSERT INTO `suppliers` (`id`, `owner_id`, `supplier_code`, `company_name`, `contact_person`, `email`, `phone`, `address`, `city`, `state`, `country`, `postal_code`, `tax_id`, `payment_terms`, `credit_limit`, `current_balance`, `rating`, `status`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
 (1, 1, 'SUP-001', 'Tech World Ltd', 'Mr. Karim Ahmed', 'karim@techworld.com', '+880 1712345678', 'House 45, Road 12, Gulshan', 'Dhaka', 'Dhaka', 'Bangladesh', NULL, NULL, 'Net 30', 500000.00, 0.00, 4.50, 'Active', NULL, 1, '2025-11-05 18:33:16', '2025-11-05 18:33:16'),
 (2, 1, 'SUP-002', 'Global Electronics BD', 'Ms. Fatima Khan', 'fatima@globalelec.com', '+880 1823456789', 'Plot 23, Sector 7, Uttara', 'Dhaka', 'Dhaka', 'Bangladesh', NULL, NULL, 'Net 60', 750000.00, 0.00, 4.80, 'Active', NULL, 1, '2025-11-05 18:33:16', '2025-11-05 18:33:16'),
-(3, 1, 'SUP-003', 'Prime Imports', 'Mr. Rajesh Kumar', 'rajesh@primeimports.com', '+880 1934567890', 'CDA Avenue, GEC Circle', 'Chittagong', 'Chittagong', 'Bangladesh', NULL, NULL, 'Net 15', 300000.00, 0.00, 3.90, 'Active', NULL, 1, '2025-11-05 18:33:16', '2025-11-05 18:33:16');
+(3, 1, 'SUP-003', 'Prime Imports', 'Mr. Rajesh Kumar', 'rajesh@primeimports.com', '+880 1934567890', 'CDA Avenue, GEC Circle', 'Chittagong', 'Chittagong', 'Bangladesh', NULL, NULL, 'Net 15', 300000.00, 0.00, 3.90, 'Active', NULL, 1, '2025-11-05 18:33:16', '2025-11-05 18:33:16'),
+(4, 1, 'SUP-004', 'Phulpur Mohila Degree College', 'Ahanaf Abid Sazid', 'srsrizon665@gmail.com', '+8801706941756', 'phulpur', 'Phulpur', 'Merul DIT', 'Bangladesh', '2200', NULL, 'Net 30', 0.00, 0.00, NULL, 'Active', NULL, 12, '2025-11-05 20:57:55', '2025-11-05 20:57:55'),
+(5, 1, 'SUP-20251106-7085', 'Phulpur Mohila Degree College', 'Ahanaf Abid Sazid', 'srsrizon665@gmail.com', '+8801706941756', 'phulpur', 'Phulpur', 'Merul DIT', 'Bangladesh', '2200', NULL, 'Net 30', 0.00, 0.00, NULL, 'Active', NULL, 12, '2025-11-05 20:57:55', '2025-11-05 20:57:55'),
+(6, 1, 'SUP-20251106-7231', 'Next Youth', 'Ahanaf Abid Sazid', 'srsrizon665@gmail.com', '+8801706941756', 'Merul DIT', 'Dhaka', NULL, 'Bangladesh', '1212', NULL, 'Net 30', 0.00, 0.00, NULL, 'Active', NULL, 12, '2025-11-05 21:06:53', '2025-11-05 21:06:53'),
+(7, 1, 'SUP-007', 'Next Youth', 'Ahanaf Abid Sazid', 'srsrizon665@gmail.com', '+8801706941756', 'Merul DIT', 'Dhaka', NULL, 'Bangladesh', '1212', NULL, 'Net 30', 0.00, 0.00, NULL, 'Active', NULL, 12, '2025-11-05 21:06:53', '2025-11-05 21:06:53'),
+(8, 1, 'SUP-20251106-9601', 'Nexaurro', 'Ahanaf Abid Sazid', 'srsrizon665@gmail.com', '+8801701057395', 'Merul DIT', 'Dhaka', NULL, 'Bangladesh', '1212', NULL, 'Net 30', 0.00, 0.00, NULL, 'Active', NULL, 12, '2025-11-05 21:13:22', '2025-11-05 21:13:22');
 
 -- --------------------------------------------------------
 
@@ -791,8 +804,8 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `phone`, `role`, `owner_
 (8, 'Ahanaf Abid Sazid', 'ext.ahanaf@gmail.com', '$2y$10$vPCQquZNIqT6oqA6xJAG/uTsYqfXDTraPskkUwq340mrAiTdMdwmO', NULL, 'Owner', NULL, 'Active', NULL, NULL, '2025-11-03 16:20:59', '2025-11-03 16:20:59'),
 (9, 'Ahanaf Abid Sazid', 'ahanaf.abid.sazid@g.bracu.ac.bd', '$2y$10$MBBka9MFn/ObK/owJSnB0.ZVEEoTNhXTnjaxeYFkfq1oHqRqFpLoi', NULL, 'Accountant', 1, 'Active', NULL, '2025-11-03 21:37:45', '2025-11-03 16:25:42', '2025-11-03 21:37:45'),
 (10, 'Mr. accountant', 'ext.ahanaf.abid@gmail.com', '$2y$10$GUN1V8COnltfp4Gccz1k/e5b5ZSClsE0V1FOqd1nnzXtoMQnJrbJe', NULL, 'Moderator', 1, 'Active', NULL, '2025-11-03 21:37:54', '2025-11-03 16:27:28', '2025-11-03 21:37:54'),
-(11, 'Mr. Store man', 'ext.ahan@gmail.com', '$2y$10$om82Uzx/YY5qYHaLjsggCOnRD1WzZfFhnP8RDnPtKOTqxlD/UUz9q', NULL, 'Store In-charge', 1, 'Active', NULL, '2025-11-03 21:52:59', '2025-11-03 20:48:45', '2025-11-03 21:52:59'),
-(12, 'mr. admin in charge', 'ext.admin@gmail.com', '$2y$10$auCrlv.rs0c668wheszaKewFlVTFwXqKbqQYyFK6K8LqYPrARsGrO', NULL, 'Admin In-charge', 1, 'Active', NULL, '2025-11-05 18:15:25', '2025-11-05 18:15:05', '2025-11-05 18:15:25');
+(11, 'Mr. Store man', 'ext.ahan@gmail.com', '$2y$10$om82Uzx/YY5qYHaLjsggCOnRD1WzZfFhnP8RDnPtKOTqxlD/UUz9q', NULL, 'Store In-charge', 1, 'Active', NULL, '2025-11-05 19:37:32', '2025-11-03 20:48:45', '2025-11-05 19:37:32'),
+(12, 'mr. admin in charge', 'ext.admin@gmail.com', '$2y$10$auCrlv.rs0c668wheszaKewFlVTFwXqKbqQYyFK6K8LqYPrARsGrO', NULL, 'Admin In-charge', 1, 'Active', NULL, '2025-11-05 19:37:42', '2025-11-05 18:15:05', '2025-11-05 19:37:42');
 
 --
 -- Indexes for dumped tables
@@ -901,7 +914,8 @@ ALTER TABLE `grn_items`
   ADD PRIMARY KEY (`id`),
   ADD KEY `grn_id` (`grn_id`),
   ADD KEY `product_id` (`product_id`),
-  ADD KEY `batch_number` (`batch_number`);
+  ADD KEY `batch_number` (`batch_number`),
+  ADD KEY `idx_owner` (`owner_id`);
 
 --
 -- Indexes for table `inventory_audit_logs`
@@ -1093,7 +1107,7 @@ ALTER TABLE `delivery_tracking_history`
 -- AUTO_INCREMENT for table `grn`
 --
 ALTER TABLE `grn`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `grn_items`
@@ -1105,7 +1119,7 @@ ALTER TABLE `grn_items`
 -- AUTO_INCREMENT for table `inventory_audit_logs`
 --
 ALTER TABLE `inventory_audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `inventory_forecasts`
@@ -1123,7 +1137,7 @@ ALTER TABLE `low_stock_alerts`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `product_barcodes`
@@ -1135,7 +1149,7 @@ ALTER TABLE `product_barcodes`
 -- AUTO_INCREMENT for table `product_batches`
 --
 ALTER TABLE `product_batches`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `product_discounts`
@@ -1159,7 +1173,7 @@ ALTER TABLE `stock_alerts`
 -- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `supplier_performance`

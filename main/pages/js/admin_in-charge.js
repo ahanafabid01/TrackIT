@@ -1504,52 +1504,7 @@ function updateAllSupplierDropdowns() {
     // Add other supplier dropdown updates here if needed
 }
 
-async function createSupplier(event) {
-    event.preventDefault();
-    
-    const companyName = document.getElementById('supplierCompanyName').value;
-    
-    if (!companyName.trim()) {
-        showNotification('Company name is required', 'error');
-        return;
-    }
-    
-    const formData = {
-        company_name: companyName.trim(),
-        contact_person: document.getElementById('supplierContactPerson').value || null,
-        email: document.getElementById('supplierEmail').value || null,
-        phone: document.getElementById('supplierPhone').value || null,
-        tax_id: document.getElementById('supplierTaxId').value || null,
-        address: document.getElementById('supplierAddress').value || null,
-        city: document.getElementById('supplierCity').value || null,
-        state: document.getElementById('supplierState').value || null,
-        postal_code: document.getElementById('supplierPostalCode').value || null,
-        country: document.getElementById('supplierCountry').value || 'Bangladesh',
-        payment_terms: document.getElementById('supplierPaymentTerms').value || 'Net 30',
-        credit_limit: parseFloat(document.getElementById('supplierCreditLimit').value || 0),
-        notes: document.getElementById('supplierNotes').value || null,
-        status: 'Active'
-    };
-    
-    console.log('Sending supplier data:', formData);
-    
-    try {
-        const response = await fetchAPI('../../api/admin_incharge/suppliers.php', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (response.success) {
-            showNotification('Supplier added successfully', 'success');
-            closeModal('createSupplierModal');
-            if (typeof loadSuppliers === 'function') loadSuppliers();
-            if (typeof loadDashboardStats === 'function') loadDashboardStats();
-        }
-    } catch (error) {
-        console.error('Failed to create supplier:', error);
-        showNotification('Failed to create supplier', 'error');
-    }
-}
+// Removed duplicate createSupplier function - using handleCreateSupplier instead
 
 // Stock Adjustment Modal
 async function showStockAdjustModal(productId) {
@@ -1729,13 +1684,8 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('GRN form not found');
     }
     
-    const supplierForm = document.getElementById('createSupplierForm');
-    if (supplierForm) {
-        supplierForm.addEventListener('submit', createSupplier);
-        console.log('Supplier form listener attached');
-    } else {
-        console.log('Supplier form not found');
-    }
+    // Supplier form uses onsubmit="handleCreateSupplier(event)" in HTML
+    // No need to attach listener here to avoid duplicate submissions
     
     const stockForm = document.getElementById('stockAdjustForm');
     if (stockForm) {
