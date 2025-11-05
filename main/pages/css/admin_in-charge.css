@@ -54,6 +54,10 @@
     background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
 }
 
+.action-icon.orange {
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+}
+
 .action-title {
     font-size: 18px;
     font-weight: 700;
@@ -66,25 +70,502 @@
     color: var(--text-secondary);
 }
 
-.barcode-generator {
+/* Badge Styles */
+.badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-green {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.badge-orange {
+    background: #fed7aa;
+    color: #ea580c;
+}
+
+.badge-red {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.badge-blue {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.badge-purple {
+    background: #e0e7ff;
+    color: #6366f1;
+}
+
+.badge-gray {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Button Styles */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+}
+
+.btn-info {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #2563eb;
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Section Actions */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+}
+
+.section-actions {
+    display: flex;
+    gap: 15px;
+}
+
+/* Filters Container */
+.filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 25px;
+    padding: 25px;
     background: white;
-    padding: 30px;
-    border-radius: 15px;
+    border-radius: 12px;
     box-shadow: var(--shadow-sm);
-    margin-top: 20px;
-    text-align: center;
 }
 
-.barcode-display {
-    margin: 20px 0;
-    padding: 30px;
-    background: var(--bg-color);
-    border-radius: 10px;
-    border: 2px dashed var(--border-color);
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
 }
 
+.filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-group label i {
+    color: var(--primary-color);
+    font-size: 12px;
+}
+
+.filters-container select,
+.filters-container input {
+    padding: 12px 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.filters-container select:focus,
+.filters-container input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filters-container input::placeholder {
+    color: #9ca3af;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    background: #f3f4f6;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6b7280;
+}
+
+.action-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Table Styles */
+.table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.table-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-container thead {
+    background: #f9fafb;
+}
+
+.table-container th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.table-container td {
+    padding: 15px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.table-container tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* Animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
     .action-cards {
         grid-template-columns: 1fr;
+    }
+    
+    .filters-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        min-width: 100%;
+    }
+    
+    .filters-container select,
+    .filters-container input {
+        width: 100%;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .section-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .section-actions .btn {
+        width: 100%;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    /* GRN Modal Mobile Responsive */
+    #createGRNModal > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    
+    #createGRNModal form {
+        padding: 15px !important;
+    }
+    
+    #createGRNModal h3,
+    #createGRNModal h4 {
+        font-size: 16px !important;
+    }
+    
+    #createGRNModal label {
+        font-size: 12px !important;
+    }
+    
+    #createGRNModal input,
+    #createGRNModal select,
+    #createGRNModal textarea {
+        font-size: 13px !important;
+        padding: 10px 12px !important;
+    }
+    
+    #createGRNModal button {
+        font-size: 13px !important;
+        padding: 10px 16px !important;
+    }
+    
+    /* GRN Grid Layouts - Stack on Mobile */
+    #createGRNModal [style*="grid-template-columns: 1fr 1fr"],
+    #createGRNModal [style*="grid-template-columns: repeat(2, 1fr)"] {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* GRN Item Fields */
+    .grn-item-fields {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    
+    .grn-item {
+        padding: 15px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .grn-item-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px;
+    }
+    
+    .grn-item-remove {
+        width: 100%;
+        text-align: center;
+    }
+    
+    /* Quick Add Product Modal Mobile */
+    #quickAddProductModal > div {
+        width: 95% !important;
+        margin: 10px !important;
+    }
+    
+    #quickAddProductModal form {
+        padding: 20px !important;
+    }
+    
+    #quickAddProductModal [style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+    
+    #quickAddProductModal label {
+        font-size: 12px !important;
+    }
+    
+    #quickAddProductModal input,
+    #quickAddProductModal select,
+    #quickAddProductModal textarea {
+        font-size: 13px !important;
+    }
+    
+    /* Add Stock Modal Mobile */
+    #addStockModal > div {
+        width: 95% !important;
+        margin: 10px !important;
+    }
+    
+    #addStockModal form {
+        padding: 20px !important;
+    }
+    
+    #addStockModal [style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Tablet Responsive (768px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #createGRNModal > div {
+        width: 90% !important;
+        max-width: 750px !important;
+    }
+    
+    #createGRNModal h3 {
+        font-size: 18px !important;
+    }
+    
+    #createGRNModal h4 {
+        font-size: 15px !important;
+    }
+    
+    #createGRNModal label {
+        font-size: 13px !important;
+    }
+    
+    #createGRNModal input,
+    #createGRNModal select {
+        font-size: 14px !important;
+    }
+}
+
+/* GRN Item Styles */
+.grn-item {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.grn-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.grn-item-number {
+    font-weight: 700;
+    color: #3b82f6;
+    font-size: 14px;
+}
+
+.grn-item-remove {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.grn-item-remove:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+.grn-item-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+@media (max-width: 768px) {
+    .grn-item-fields {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* Supplier Modal Responsive */
+@media (max-width: 768px) {
+    #createSupplierModal > div {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 10px !important;
+    }
+    
+    #createSupplierModal h4 {
+        font-size: 14px !important;
+    }
+    
+    #createSupplierModal label {
+        font-size: 12px !important;
+    }
+    
+    #createSupplierModal input,
+    #createSupplierModal select,
+    #createSupplierModal textarea {
+        font-size: 13px !important;
+        padding: 10px 12px !important;
+    }
+    
+    #createSupplierModal form > div > div {
+        grid-template-columns: 1fr !important;
+    }
+    
+    #createSupplierModal form > div > div > div[style*='grid-column: span 2'] {
+        grid-column: span 1 !important;
     }
 }
